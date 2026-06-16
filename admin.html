@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>심야 드라이브 · 관리자</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg:#f4f5f7; --border:rgba(0,0,0,0.09); --border-hi:rgba(0,0,0,0.20);
+      --text:rgba(0,0,0,0.82); --dim:rgba(0,0,0,0.42); --mute:rgba(0,0,0,0.28);
+      --surf:rgba(0,0,0,0.025);
+      --g:rgba(22,163,74,1); --g-bg:rgba(22,163,74,0.09); --g-bd:rgba(22,163,74,0.28); --g-text:rgba(15,118,54,1);
+      --r-bg:rgba(220,38,38,0.08); --r-bd:rgba(220,38,38,0.24); --r-text:rgba(185,28,28,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html{scrollbar-gutter:stable;}
+    html,body{margin:0;padding:0;min-height:100dvh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;}
+    input[type=text],textarea,select{background:#fff;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;width:100%;outline:none;transition:border-color .18s,background .18s;}
+    input[type=text]:focus,textarea:focus,select:focus{border-color:var(--border-hi);background:#fff;}
+    input::placeholder,textarea::placeholder{color:var(--mute);}
+    label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:6px;}
+    button{font-family:inherit;cursor:pointer;}
+    textarea{resize:vertical;}
+
+    /* Layout */
+    #wrap{min-height:100dvh;}
+    #sb{
+      position:fixed;
+      top:86px;
+      left:calc(50% - 676px); /* 450(half content) + 16(gap) + 210(sidebar) */
+      width:210px;
+      max-height:calc(100dvh - 48px);
+      overflow-y:auto;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:22px 12px;
+      display:flex;flex-direction:column;gap:3px;
+      background:#eceef1;
+      box-shadow:0 2px 12px rgba(0,0,0,0.06);
+      z-index:10;
+    }
+    #ca{min-height:100dvh;}
+    .panel{display:none;padding:32px 40px;width:100%;max-width:900px;margin:0 auto;}
+    .panel.active{display:block;}
+
+    /* Sidebar */
+    .sb-brand{padding:0 4px;margin-bottom:16px;}
+    .sb-brand p{font-size:13.2px;font-weight:700;color:rgba(0,0,0,0.82);margin:0;letter-spacing:.01em;}
+    .sep{height:1px;background:var(--border);margin:7px 0;}
+    .ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:rgba(0,0,0,0.42);cursor:pointer;border:none;background:none;width:100%;text-align:left;text-decoration:none;transition:background .16s,color .16s;}
+    .ni:hover{background:rgba(0,0,0,0.05);color:rgba(0,0,0,0.72);}
+    .ni.active{background:var(--g-bg);color:var(--g-text);border:1px solid var(--g-bd);}
+    .sb-sp{flex:1;}
+
+    /* Action bar (sticky top of content area) */
+    #topbar{
+      position:sticky;top:0;z-index:50;
+      background:rgba(244,245,247,0.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border);
+      width:100%;
+    }
+    #topbar-inner{width:100%;max-width:900px;margin:0 auto;padding:10px 40px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    #draft-status{font-size:12px;color:var(--mute);font-weight:500;display:flex;align-items:center;gap:6px;}
+    #draft-status .dot{width:6px;height:6px;border-radius:50%;background:var(--mute);flex-shrink:0;}
+    #draft-status.has-draft .dot{background:rgba(202,138,4,0.90);}
+    #draft-status.has-draft{color:rgba(161,98,7,0.90);}
+
+    /* Buttons */
+    .btn{border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;transition:background .16s,opacity .16s;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+    .btn-p{background:var(--g-bg);border-color:var(--g-bd);color:var(--g-text);}
+    .btn-p:hover:not(:disabled){background:rgba(22,163,74,0.15);}
+    .btn-p:disabled{opacity:.32;cursor:not-allowed;}
+    .btn-g{background:rgba(0,0,0,0.04);border-color:var(--border);color:rgba(0,0,0,0.52);}
+    .btn-g:hover{background:rgba(0,0,0,0.07);}
+    .btn-d{background:var(--r-bg);border-color:var(--r-bd);color:var(--r-text);}
+    .btn-d:hover{background:rgba(220,38,38,0.13);}
+    .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:9px;height:30px;box-sizing:border-box;}
+    .ico-btn{background:rgba(0,0,0,0.04);border:1px solid var(--border);border-radius:9px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;transition:background .16s;flex-shrink:0;}
+    .ico-btn:hover{background:rgba(0,0,0,0.08);}
+
+    /* Section */
+    .pg-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:16px;}
+    .pg-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.02em;margin:0 0 4px;}
+    .pg-sub{font-size:12.5px;color:var(--dim);font-weight:500;margin:0;}
+    .card{background:#fff;border:1px solid var(--border);border-radius:15px;padding:18px 20px;margin-bottom:14px;}
+    .card-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(0,0,0,0.32);margin-bottom:11px;}
+
+    /* Library toolbar */
+    #lib-summary{display:flex;align-items:center;gap:9px;font-size:12px;border-left:1px solid var(--border);padding-left:12px;margin-left:4px;}
+    .lib-sum-item{display:flex;align-items:center;gap:4px;color:var(--dim);}
+    .lib-sum-item strong{font-size:12.5px;font-weight:700;color:rgba(0,0,0,0.80);}
+    .lib-sum-sep{width:1px;height:12px;background:var(--border);}
+    #lib-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+    #lib-search{flex:1;max-width:260px;min-width:140px;}
+    .lib-bulk-bar{display:flex;align-items:center;gap:7px;margin-left:auto;}
+    .lib-bulk-count{font-size:12px;font-weight:600;color:var(--dim);white-space:nowrap;padding-right:2px;}
+
+    /* Library list */
+    #lib-list-outer{border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+    .lib-head{display:flex;align-items:center;gap:13px;padding:9px 15px;background:#f4f5f7;border-bottom:1px solid var(--border);}
+    #lib-list{border:none;border-radius:0;}
+    .lib-row{display:flex;align-items:center;gap:13px;padding:11px 15px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s;background:#fff;}
+    .lib-row:last-child{border-bottom:none;}
+    .lib-row:hover{background:#f8f9fa;}
+    .lib-row.sel{background:rgba(22,163,74,0.04)!important;}
+    .lib-cb{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--g);}
+    .lib-num{font-size:11px;font-weight:700;color:rgba(0,0,0,0.28);letter-spacing:.03em;flex-shrink:0;width:44px;font-variant-numeric:tabular-nums;}
+    .lib-thumb{width:46px;height:46px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;}
+    .lib-body{flex:1;min-width:0;overflow:hidden;}
+    .lib-title{font-size:13.5px;font-weight:700;color:rgba(0,0,0,0.80);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .lib-meta{font-size:11.5px;color:rgba(0,0,0,0.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;}
+    .lib-acts{display:flex;gap:6px;flex-shrink:0;align-items:center;}
+    .lib-empty{padding:52px 24px;text-align:center;color:rgba(0,0,0,0.30);font-size:13px;line-height:1.7;}
+    .pub-tog{display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid transparent;flex-shrink:0;transition:all .14s;background:none;height:30px;box-sizing:border-box;}
+    .pub-tog.on{background:rgba(37,99,235,0.08);border-color:rgba(37,99,235,0.28);color:rgba(29,78,216,1);}
+    .pub-tog.off{background:rgba(0,0,0,0.04);border-color:rgba(0,0,0,0.10);color:rgba(0,0,0,0.38);}
+
+    /* Pagination */
+    #lib-pagination{display:flex;align-items:center;justify-content:center;gap:4px;padding:18px 0 4px;}
+    .pg-btn{min-width:32px;height:32px;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid var(--border);background:#fff;color:var(--dim);cursor:pointer;transition:background .13s,color .13s;}
+    .pg-btn:hover:not(:disabled):not(.active){background:#f4f5f7;}
+    .pg-btn.active{background:var(--g-bg);border-color:var(--g-bd);color:var(--g-text);}
+    .pg-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+    /* Bulk delete modal */
+    #bulk-del-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.40);z-index:400;align-items:center;justify-content:center;}
+    #bulk-del-modal.open{display:flex;}
+    .modal-box{background:#fff;border-radius:18px;padding:28px 28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.18);margin:16px;}
+    .modal-title{font-size:16px;font-weight:800;color:var(--text);margin:0 0 8px;}
+    .modal-desc{font-size:13px;color:var(--dim);margin:0 0 16px;line-height:1.65;}
+    .modal-err{font-size:12px;color:var(--r-text);margin-top:6px;min-height:18px;}
+    .modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;}
+
+    /* Form preview */
+    .form-prev{height:172px;border-radius:17px;overflow:hidden;position:relative;margin-bottom:16px;}
+
+    /* Presets */
+    .sp1{background:radial-gradient(ellipse at 65% 25%,#2d1b4e 0%,#090912 55%),linear-gradient(175deg,#0a0818 0%,#1a0f30 55%,#060609 100%);}
+    .sp2{background:radial-gradient(ellipse at 30% 60%,#0a2d40 0%,#030d15 55%),linear-gradient(175deg,#030d12 0%,#0d2535 55%,#030a10 100%);}
+    .sp3{background:radial-gradient(ellipse at 70% 40%,#1a2d0a 0%,#0a0d03 55%),linear-gradient(175deg,#050810 0%,#151f0a 55%,#050808 100%);}
+    .sp4{background:radial-gradient(ellipse at 45% 30%,#1a0a30 0%,#090912 55%),linear-gradient(175deg,#060609 0%,#120a28 55%,#050508 100%);}
+    .sp5{background:radial-gradient(ellipse at 55% 50%,#2d1a0a 0%,#0d0905 55%),linear-gradient(175deg,#0a0503 0%,#1e1005 55%,#090502 100%);}
+    .psw{width:36px;height:36px;border-radius:8px;border:2px solid transparent;cursor:pointer;transition:border-color .16s,transform .14s;flex-shrink:0;}
+    .psw:hover{transform:scale(1.08);}
+    .psw.sel{border-color:rgba(22,163,74,0.72);}
+
+    /* Curation */
+    .cur-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(0,0,0,0.32);margin-bottom:8px;padding-left:1px;}
+    .cur-slot{display:flex;align-items:center;gap:9px;padding:9px 11px;background:#fff;border:1px solid var(--border);border-radius:11px;margin-bottom:7px;overflow:hidden;}
+    .cur-thumb{width:42px;height:42px;border-radius:7px;flex-shrink:0;}
+    .cur-body{flex:1;min-width:0;overflow:hidden;}
+    .cur-title{font-size:13px;font-weight:700;color:rgba(0,0,0,0.76);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .cur-loc{font-size:11px;color:rgba(0,0,0,0.36);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+    .cur-acts{display:flex;gap:4px;flex-shrink:0;}
+    .cur-add{display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed rgba(0,0,0,0.14);border-radius:11px;padding:13px;font-size:13px;font-weight:600;color:rgba(0,0,0,0.32);cursor:pointer;transition:background .16s,border-color .16s,color .16s;}
+    .cur-add:hover{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.22);color:rgba(0,0,0,0.56);}
+    .cur-drag-handle{cursor:grab;color:rgba(0,0,0,0.22);display:flex;align-items:center;padding:2px 4px;flex-shrink:0;border-radius:4px;}
+    .cur-drag-handle:hover{color:rgba(0,0,0,0.45);background:rgba(0,0,0,0.04);}
+    .cur-drag-handle:active{cursor:grabbing;}
+    .cur-slot.cur-drag-over{outline:2px solid rgba(37,99,235,0.40);outline-offset:-2px;background:rgba(37,99,235,0.04);}
+
+    /* Picker overlay */
+    #picker-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;overflow-y:auto;}
+    #picker-ov.open{display:flex;align-items:flex-start;justify-content:center;padding:48px 20px;}
+    .pk-box{background:#fff;border:1px solid var(--border);border-radius:20px;width:100%;max-width:600px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);}
+    .pk-hd{padding:18px 20px 14px;border-bottom:1px solid var(--border);}
+    .pk-hd-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .pk-list{max-height:480px;overflow-y:auto;}
+    .pk-row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .13s;}
+    .pk-row:last-child{border-bottom:none;}
+    .pk-row:hover:not(.dis){background:rgba(0,0,0,0.02);}
+    .pk-row.dis{cursor:default;}
+    .pk-row.sel{background:rgba(37,99,235,0.05);}
+    .pk-row-cb{width:15px;height:15px;flex-shrink:0;accent-color:rgba(37,99,235,1);cursor:pointer;}
+    .pk-row-thumb{width:40px;height:40px;border-radius:7px;flex-shrink:0;position:relative;overflow:hidden;}
+    .pk-row-body{flex:1;min-width:0;}
+    .pk-row-title{font-size:13px;font-weight:700;color:rgba(0,0,0,0.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pk-row-meta{font-size:11px;color:rgba(0,0,0,0.38);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pk-added{font-size:10.5px;font-weight:700;color:rgba(29,78,216,1);background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.20);border-radius:5px;padding:2px 7px;flex-shrink:0;white-space:nowrap;}
+
+    /* Image grid */
+    .img-grd{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+    .img-cell{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:2px solid transparent;transition:border-color .16s;}
+    .img-cell.is-th{border-color:rgba(22,163,74,0.55);}
+    .img-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+    .img-add{aspect-ratio:1;border-radius:10px;background:#f4f5f7;border:1.5px dashed rgba(0,0,0,0.14);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .16s,border-color .16s;}
+    .img-add:hover{background:#eceef1;border-color:rgba(0,0,0,0.24);}
+
+    /* Mood chip multi-select */
+    .mood-btn{padding:6px 14px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .mood-btn.off{border:1px solid rgba(0,0,0,0.10);background:rgba(0,0,0,0.04);color:rgba(0,0,0,0.44);}
+    .mood-btn.on{border:1px solid var(--g-bd);background:var(--g-bg);color:var(--g-text);}
+    .mood-btn:hover{filter:brightness(0.95);}
+
+    /* Hero chip rows */
+    .chip-row{padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);}
+    .chip-row:last-of-type{border-bottom:none;}
+    .chip-row-inner{display:flex;align-items:center;gap:10px;}
+    .chip-drag-handle{cursor:grab;color:rgba(0,0,0,0.22);display:flex;align-items:center;padding:2px 3px;flex-shrink:0;border-radius:4px;}
+    .chip-drag-handle:hover{color:rgba(0,0,0,0.45);background:rgba(0,0,0,0.04);}
+    .chip-drag-handle:active{cursor:grabbing;}
+    .chip-row.drag-over{outline:2px solid rgba(37,99,235,0.40);outline-offset:-1px;border-radius:8px;background:rgba(37,99,235,0.04);}
+
+    /* Icon picker (inline) */
+    .ico-pick-btn{
+      width:40px;height:40px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.05);border:1px solid var(--border);cursor:pointer;
+      transition:background .15s,border-color .15s;color:rgba(0,0,0,0.52);
+    }
+    .ico-pick-btn:hover,.ico-pick-btn.open{background:rgba(0,0,0,0.08);border-color:var(--border-hi);}
+    .ico-pick-btn.open{border-color:rgba(22,163,74,0.40);}
+    .ico-picker{
+      margin:8px 0 4px;
+      display:grid;grid-template-columns:repeat(8,1fr);gap:5px;
+      background:#f4f5f7;border:1px solid var(--border);
+      border-radius:12px;padding:10px;
+    }
+    .ico-cell{
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      padding:7px 3px;border-radius:8px;cursor:pointer;border:1px solid transparent;
+      transition:background .13s,border-color .13s;color:rgba(0,0,0,0.52);
+    }
+    .ico-cell:hover{background:rgba(0,0,0,0.06);}
+    .ico-cell.sel{background:var(--g-bg);border-color:var(--g-bd);color:var(--g-text);}
+    .ico-cell span{font-size:8.5px;color:rgba(0,0,0,0.32);text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;max-width:100%;}
+    .ico-cell.sel span{color:rgba(15,118,54,0.80);}
+
+    /* Heading mode tabs */
+    .htab-bar{display:flex;gap:3px;padding:3px;background:#eceef1;border-radius:10px;margin-bottom:14px;}
+    .htab-btn{flex:1;padding:6px 0;font-size:12.5px;font-weight:600;border:none;background:transparent;border-radius:8px;cursor:pointer;color:rgba(0,0,0,0.45);transition:all .15s;}
+    .htab-btn.active{background:#fff;color:rgba(0,0,0,0.82);box-shadow:0 1px 3px rgba(0,0,0,0.10);}
+    .hdef-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+    .hslot{border:1px solid var(--border);border-radius:12px;padding:14px 14px 12px;margin-bottom:10px;}
+    .hslot-hours{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;margin-bottom:11px;}
+    .hslot-hour{height:26px;border-radius:5px;font-size:10.5px;font-weight:600;border:1px solid var(--border);background:#f4f5f7;color:rgba(0,0,0,0.38);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .14s;user-select:none;min-width:0;}
+    .hslot-hour.on{background:rgba(37,99,235,0.10);border-color:rgba(37,99,235,0.30);color:rgba(29,78,216,1);}
+    .htab-section-lbl{font-size:11.5px;font-weight:700;color:rgba(0,0,0,0.52);margin-bottom:8px;}
+    .htab-section-sub{font-size:11.5px;color:rgba(0,0,0,0.38);font-weight:400;}
+    .htab-div{border-top:1px solid var(--border);margin:16px 0 14px;}
+  </style>
+</head>
+<body>
+  <input type="file" id="fi" accept="image/*" multiple style="display:none" onchange="handleFile(event)">
+
+  <!-- Spot picker overlay -->
+  <div id="picker-ov">
+    <div class="pk-box">
+      <div class="pk-hd">
+        <div class="pk-hd-top">
+          <div style="font-size:15px;font-weight:800;" id="pk-title">스팟 선택</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-p btn-sm" id="pk-add-btn" onclick="bulkAddToSlot()" disabled>추가 <span id="pk-sel-cnt">0</span>개</button>
+            <button class="btn btn-g btn-sm" onclick="closePicker()">닫기</button>
+          </div>
+        </div>
+        <input type="text" id="pk-search" placeholder="제목, 장소, 번호 검색…" oninput="onPickerSearch(this.value)" style="width:100%;box-sizing:border-box;">
+      </div>
+      <div class="pk-list" id="pk-list"></div>
+    </div>
+  </div>
+
+  <div id="wrap">
+    <!-- ── Sidebar ── -->
+    <aside id="sb">
+      <div class="sb-brand">
+        <p>관리자 페이지</p>
+      </div>
+      <div class="sep"></div>
+      <button class="ni active" onclick="showPanel('library')" id="nav-library">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        스팟 라이브러리
+      </button>
+      <button class="ni" onclick="showPanel('hero')" id="nav-hero">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        첫페이지 편집
+      </button>
+      <button class="ni" onclick="showPanel('curation')" id="nav-curation">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        메인콘텐츠 편집
+      </button>
+      <button class="ni" onclick="showPanel('filters')" id="nav-filters">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+        필터 관리
+      </button>
+      <button class="ni" onclick="showPanel('backup')" id="nav-backup">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+        백업 / 복원
+      </button>
+      <div class="sb-sp"></div>
+      <div class="sep"></div>
+      <a href="index.html?preview=draft" target="_blank" class="ni" style="text-decoration:none;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        미리보기
+      </a>
+      <a href="index.html" target="_blank" class="ni" style="text-decoration:none;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        발행 사이트
+      </a>
+    </aside>
+
+    <!-- ── Content area ── -->
+    <main id="ca">
+
+      <!-- Sticky action bar -->
+      <div id="topbar">
+        <div id="topbar-inner">
+          <div id="draft-status">
+            <span class="dot"></span>
+            <span id="draft-text">저장된 내용 없음</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-g btn-sm" onclick="saveDraft()">임시저장</button>
+            <button class="btn btn-p btn-sm" id="publish-btn" onclick="publishData()" disabled>발행하기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ LIBRARY PANEL ══════ -->
+      <div class="panel active" id="panel-library">
+        <div class="pg-hd">
+          <div>
+            <h2 class="pg-title">스팟 라이브러리</h2>
+            <p class="pg-sub">장소 콘텐츠를 작성하고 관리합니다. 메인페이지 편집에서 배치를 설정하세요.</p>
+          </div>
+          <button class="btn btn-p btn-sm" onclick="openSpotForm(null)" style="flex-shrink:0;margin-top:2px;">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            새 스팟
+          </button>
+        </div>
+        <div id="lib-toolbar">
+          <input type="text" id="lib-search" placeholder="제목, 장소, 태그, 번호 검색…" oninput="onLibSearch(this.value)">
+          <div id="lib-summary"></div>
+          <div class="lib-bulk-bar" id="lib-bulk-bar" style="display:none;">
+            <span class="lib-bulk-count" id="lib-bulk-count"></span>
+            <button class="btn btn-g btn-sm" onclick="bulkSetPublished(true)">공개</button>
+            <button class="btn btn-g btn-sm" onclick="bulkSetPublished(false)">비공개</button>
+            <button class="btn btn-d btn-sm" onclick="openBulkDelModal()">삭제</button>
+          </div>
+        </div>
+        <div id="lib-list-outer"></div>
+        <div id="lib-pagination"></div>
+      </div>
+
+      <!-- ══════ SPOT FORM PANEL ══════ -->
+      <div class="panel" id="panel-spot-form"></div>
+
+      <!-- ══════ HERO PANEL ══════ -->
+      <div class="panel" id="panel-hero">
+        <div class="pg-hd">
+          <div>
+            <h2 class="pg-title">첫페이지 편집</h2>
+            <p class="pg-sub">히어로 섹션의 헤딩과 무드 칩을 관리합니다.</p>
+          </div>
+        </div>
+        <div class="card">
+          <p class="card-lbl">헤딩 텍스트</p>
+          <div class="htab-bar">
+            <button class="htab-btn" id="htab-btn-fixed" onclick="setHeadingMode('fixed')">고정 텍스트</button>
+            <button class="htab-btn" id="htab-btn-timed" onclick="setHeadingMode('timed')">시간대별 노출</button>
+          </div>
+          <div id="htab-fixed">
+            <input type="text" id="hero-heading" placeholder="어떤 무드가 필요한가요?" oninput="data.hero.heading=this.value">
+          </div>
+          <div id="htab-timed">
+            <p class="htab-section-lbl">기본 텍스트 <span class="htab-section-sub">— 시간대 미지정 시 랜덤 노출</span></p>
+            <div id="hdef-list"></div>
+            <button class="btn btn-g btn-sm" id="hdef-add-btn" onclick="addHeadingDefault()" style="margin-top:2px;">+ 텍스트 추가</button>
+            <div class="htab-div"></div>
+            <p class="htab-section-lbl">시간대 지정 <span class="htab-section-sub">— 해당 시간대에 지정 텍스트 노출</span></p>
+            <div id="hslot-list"></div>
+            <button class="btn btn-g btn-sm" id="hslot-add-btn" onclick="addHeadingSlot()" style="margin-top:2px;">+ 시간대 추가</button>
+          </div>
+        </div>
+        <div class="card">
+          <label>스크롤 안내 텍스트</label>
+          <input type="text" id="hero-hint" placeholder="아래로 스크롤해서 오늘의 추천 스팟 확인해보세요." oninput="data.hero.scrollHint=this.value">
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
+            <p class="card-lbl" style="margin-bottom:0;">무드 칩 목록</p>
+            <span style="font-size:11.5px;color:rgba(0,0,0,0.35);">필터 관리에서 추가·편집</span>
+          </div>
+          <div id="chips-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════ FILTERS PANEL ══════ -->
+      <div class="panel" id="panel-filters">
+        <div class="pg-hd">
+          <div>
+            <h2 class="pg-title">필터 관리</h2>
+            <p class="pg-sub">무드 필터와 출발지 필터를 관리합니다.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <p class="card-lbl" style="margin-bottom:0;">무드 필터</p>
+            <button class="btn btn-g btn-sm" onclick="addChip();renderFilterChips();">+ 무드 추가</button>
+          </div>
+          <p style="font-size:12px;color:rgba(0,0,0,0.40);margin-bottom:14px;line-height:1.6;">첫 페이지 무드 선택 화면과 아카이브 필터 칩에 공통 적용됩니다.</p>
+          <div id="flt-chips-list"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <p class="card-lbl" style="margin-bottom:0;">출발지 필터</p>
+            <button class="btn btn-g btn-sm" onclick="addRegion()">+ 출발지 추가</button>
+          </div>
+          <p style="font-size:12px;color:rgba(0,0,0,0.40);margin-bottom:14px;line-height:1.6;">각 스팟에서 출발지를 지정하면 아카이브에서 필터링됩니다.</p>
+          <div id="flt-regions-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════ CURATION PANEL ══════ -->
+      <div class="panel" id="panel-curation">
+        <div class="pg-hd">
+          <div>
+            <h2 class="pg-title">메인콘텐츠 편집</h2>
+            <p class="pg-sub">스팟 라이브러리에서 선택해 메인 페이지 배치를 구성합니다.</p>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:20px;">
+          <label>리스트 섹션 제목</label>
+          <input type="text" id="cur-title" placeholder="이런 곳은 어때요?" oninput="data.mainPage.listTitle=this.value">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+          <div>
+            <p class="cur-lbl">콘텐츠 스팟 <span style="font-weight:400;color:rgba(0,0,0,0.28);">풀스크린 슬라이드</span></p>
+            <div id="cur-content"></div>
+            <div class="cur-add" onclick="openPicker('content')">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>스팟 추가
+            </div>
+          </div>
+          <div>
+            <p class="cur-lbl">리스트 스팟 <span style="font-weight:400;color:rgba(0,0,0,0.28);">하단 목록</span></p>
+            <div id="cur-list"></div>
+            <div class="cur-add" onclick="openPicker('list')">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>스팟 추가
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ BACKUP PANEL ══════ -->
+      <div class="panel" id="panel-backup">
+        <div class="pg-hd">
+          <div>
+            <h2 class="pg-title">백업 / 복원</h2>
+            <p class="pg-sub">스팟 콘텐츠 전체를 파일로 내려받고 복원합니다.</p>
+          </div>
+        </div>
+
+        <!-- 백업 카드 -->
+        <div class="card" style="margin-bottom:16px;">
+          <p class="card-lbl" style="margin-bottom:14px;">백업</p>
+
+          <!-- 이미지 포함 토글 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.07);border-radius:10px;margin-bottom:14px;">
+            <div>
+              <p style="font-size:13px;color:rgba(0,0,0,0.76);font-weight:600;margin-bottom:2px;">이미지 포함</p>
+              <p id="backup-img-desc" style="font-size:11.5px;color:rgba(0,0,0,0.40);line-height:1.5;"></p>
+            </div>
+            <label style="position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;cursor:pointer;">
+              <input type="checkbox" id="backup-img-toggle" checked onchange="refreshBackupSummary()"
+                style="opacity:0;width:0;height:0;position:absolute;">
+              <span id="backup-toggle-track" style="position:absolute;inset:0;border-radius:12px;transition:background .2s;background:rgba(22,163,74,0.7);">
+                <span id="backup-toggle-thumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;transform:translateX(18px);"></span>
+              </span>
+            </label>
+          </div>
+
+          <!-- 요약 정보 -->
+          <div id="backup-summary" style="font-size:12px;color:rgba(0,0,0,0.48);margin-bottom:16px;line-height:1.8;padding:10px 14px;background:rgba(0,0,0,0.02);border-radius:8px;border:1px solid rgba(0,0,0,0.06);"></div>
+
+          <button class="btn btn-g btn-sm" id="backup-dl-btn" onclick="exportBackup(event)" style="gap:6px;">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+            <span id="backup-dl-label">백업 파일 내려받기</span>
+          </button>
+        </div>
+
+        <!-- 복원 카드 -->
+        <div class="card">
+          <p class="card-lbl" style="margin-bottom:14px;">복원</p>
+
+          <!-- 업로드 영역 (기본 상태) -->
+          <div id="restore-upload-area">
+            <p style="font-size:12px;color:rgba(0,0,0,0.42);margin-bottom:16px;line-height:1.7;">
+              백업 ZIP 파일을 선택하면 콘텐츠 정보를 확인한 뒤 복원할 수 있습니다.
+            </p>
+            <button class="btn btn-g btn-sm" onclick="document.getElementById('restore-file-input').click()" style="gap:6px;">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              ZIP 파일 선택
+            </button>
+            <input type="file" id="restore-file-input" accept=".zip" style="display:none"
+              onchange="previewRestore(this.files[0]); this.value='';">
+          </div>
+
+          <!-- 미리보기 영역 (파일 선택 후) -->
+          <div id="restore-preview-area" style="display:none;">
+            <div id="restore-preview-content"></div>
+            <div style="display:flex;gap:8px;margin-top:18px;">
+              <button class="btn btn-g btn-sm" onclick="cancelRestore()" style="gap:5px;">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                취소
+              </button>
+              <button class="btn btn-d btn-sm" onclick="confirmRestore()" style="gap:5px;flex:1;justify-content:center;">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                이 내용으로 복원하기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+  /* ═══════════════════ CONSTANTS & STATE ═══════════════════ */
+  const PUB_KEY   = 'nightDriveConfig';
+  const DRAFT_KEY = 'nightDriveConfig_draft';
+
+  const SB=(()=>{
+    const U='https://hqedpgvyxaohywilkhyq.supabase.co';
+    const K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZWRwZ3Z5eGFvaHl3aWxraHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NjUxMzIsImV4cCI6MjA5NzE0MTEzMn0.xS5cLymVZSSAjw1o_JJJ0Vd-hfofaYFGU9AeT7VR_6M';
+    const H={apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'};
+    return {
+      async get(){const r=await fetch(U+'/rest/v1/config?id=eq.1&select=data',{headers:H});if(!r.ok)throw new Error(r.status);const rows=await r.json();return rows[0]?.data||null;},
+      async set(d){const r=await fetch(U+'/rest/v1/config',{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id:1,data:d})});if(!r.ok)throw new Error(r.status);}
+    };
+  })();
+
+  let data, formSpot, editingSpotId, pickerTarget, uploadCtx, openIconIdx;
+  let hasDraft = false;
+  let libPage = 1, libSearch = '', libSelected = new Set();
+  let chipDragIdx = null;
+  let curDragIdx = null, curDragType = null;
+  let pickerSearch = '', pickerSel = new Set();
+  const LIB_PER_PAGE = 10;
+
+  /* ═══════════════════ ICONS ═══════════════════ */
+  // Each value: pipe-separated SVG path d attributes
+  const ICON_PATHS = {
+    laptop:     'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    headphones: 'M3 18v-6a9 9 0 0118 0v6|M3 18a3 3 0 013-3h1a2 2 0 012 2v2a2 2 0 01-2 2H6a3 3 0 01-3-3z|M21 18a3 3 0 00-3-3h-1a2 2 0 00-2 2v2a2 2 0 002 2h1a3 3 0 003-3z',
+    book:       'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+    chat:       'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+    car:        'M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z|M3.5 9l2-5h13l2 5H3.5zm0 0H21l.5 4H3L3.5 9z',
+    music:      'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3',
+    coffee:     'M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z',
+    star:       'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+    moon:       'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
+    // ── 20 NEW ──
+    'map-pin':  'M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z|M15 11a3 3 0 11-6 0 3 3 0 016 0z',
+    camera:     'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z|M15 13a3 3 0 11-6 0 3 3 0 016 0z',
+    sun:        'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
+    waves:      'M3 12.5c1.667-1.667 3.333-1.667 5 0s3.333 1.667 5 0 3.333-1.667 5 0|M3 17c1.667-1.667 3.333-1.667 5 0s3.333 1.667 5 0 3.333-1.667 5 0|M3 8c1.667-1.667 3.333-1.667 5 0s3.333 1.667 5 0 3.333-1.667 5 0',
+    mountain:   'M3.5 20.5l8.5-15 8.5 15H3.5z|M8.5 20.5l3.5-6.5 3.5 6.5',
+    tree:       'M12 2L7 10h3.5l-3 5h4V22h3v-7h4l-3-5H18L12 2z',
+    umbrella:   'M23 12a11.05 11.05 0 00-22 0zm-5 7a3 3 0 01-6 0v-7',
+    compass:    'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z|M9.5 9.5l1.5 4.5 4.5-1.5-1.5-4.5-4.5 1.5z',
+    clock:      'M12 8v4l2.5 2.5|M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    fire:       'M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z|M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z',
+    heart:      'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
+    eye:        'M15 12a3 3 0 11-6 0 3 3 0 016 0z|M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z',
+    cocktail:   'M8.25 3h7.5l-3.75 7.5H12m0 7.5V10.5m0 7.5h3.75m-7.5 0H12|M5.25 3l1.5 7.5',
+    bicycle:    'M6.5 17.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z|M17.5 17.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z|M6.5 14L10 7h4l4 7|M10 7l3 5.5M15.5 7h2.5',
+    anchor:     'M12 7a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm0 0v14M5 12c.7 4.1 3.5 6 7 6s6.3-1.9 7-6|M4 12h2.5m11 0H20',
+    cloud:      'M4 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 004 15z',
+    bolt:       'M13 10V3L4 14h7v7l9-11h-7z',
+    sparkle:    'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z',
+    tent:       'M12 3L4 20h16L12 3z|M9.5 20L12 10.5l2.5 9.5',
+    wind:       'M3 8h11.5a3.5 3.5 0 100-7H12|M3 12h15.5a3.5 3.5 0 110 7H16',
+  };
+
+  const ICON_LABELS = {
+    laptop:'노트북', headphones:'헤드폰', book:'책', chat:'대화', car:'자동차',
+    music:'음악', coffee:'커피', star:'별', moon:'달',
+    'map-pin':'위치', camera:'카메라', sun:'태양', waves:'파도', mountain:'산',
+    tree:'나무', umbrella:'우산', compass:'나침반', clock:'시계', fire:'불꽃',
+    heart:'하트', eye:'시야', cocktail:'칵테일', bicycle:'자전거', anchor:'닻',
+    cloud:'구름', bolt:'번개', sparkle:'반짝', tent:'텐트', wind:'바람',
+  };
+  const ALL_ICON_KEYS = Object.keys(ICON_PATHS);
+
+  function makeIconSvg(key, size=16) {
+    const paths = (ICON_PATHS[key] || ICON_PATHS.star).split('|')
+      .map(d=>`<path stroke-linecap="round" stroke-linejoin="round" d="${d}"/>`).join('');
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${paths}</svg>`;
+  }
+
+  /* ═══════════════════ DEFAULT DATA ═══════════════════ */
+  const DEF = {
+    brandName:"심야 드라이브",
+    hero:{
+      heading:"어떤 무드가 필요한가요?",
+      headingMode:'fixed',
+      headingTimed:{defaults:["어떤 무드가 필요한가요?"],slots:[]},
+      scrollHint:"아래로 스크롤해서 오늘의 추천 스팟 확인해보세요.",
+      chips:[
+        {id:"c1",icon:"laptop",label:"나혼자 작업"},
+        {id:"c2",icon:"headphones",label:"멍때리기"},
+        {id:"c3",icon:"book",label:"미술전시"},
+        {id:"c4",icon:"chat",label:"수다"}
+      ]
+    },
+    spots:[
+      {id:"sp1", title:"헤드폰 볼륨을 높여도 눈치 보이지 않는 곳",      thumbTitle1:"헤드폰 볼륨을 높여도",        thumbTitle2:"눈치 보이지 않는 곳",   tags:"#노트북작업 #새벽3시마감 #주차여유",   moodChipIds:["c1"],      location:"경기 남양주 OOO카페",  description:"",bgPreset:"1",bgColor:"#1a2e4a",images:[],thumbnailImageId:null},
+      {id:"sp2", title:"가로등 없는 굽은 길 끝, 차 안에서 즐기는 물멍",  thumbTitle1:"가로등 없는 굽은 길 끝,",   thumbTitle2:"차 안에서 즐기는 물멍",  tags:"#가만히물멍 #24시간개방 #야외주차장", moodChipIds:["c2"],      location:"경기 양평 OOO공원",   description:"",bgPreset:"2",bgColor:"#0d2535",images:[],thumbnailImageId:null},
+      {id:"sp3", title:"새벽의 죽도해변, 파도 소리만 들리는 곳",          thumbTitle1:"파도 소리만 들리는",         thumbTitle2:"새벽의 죽도해변",        tags:"#밤바다 #파도소리 #24시간",           moodChipIds:["c2"],      location:"강원 양양 · 죽도해변", description:"",bgPreset:"3",bgColor:"#1a3a5c",images:[],thumbnailImageId:null},
+      {id:"sp4", title:"구름 위 호수에서 혼자만의 물멍",                  thumbTitle1:"구름 위 호수에서",           thumbTitle2:"혼자만의 물멍",          tags:"#물멍 #산정상 #야간개방",            moodChipIds:["c2"],      location:"경기 가평 · 호명호수", description:"",bgPreset:"4",bgColor:"#1e4d4d",images:[],thumbnailImageId:null},
+      {id:"sp5", title:"인천 끝자락에서 만나는 황금빛 을왕리 노을",      thumbTitle1:"인천 끝자락에서 만나는",     thumbTitle2:"황금빛 을왕리 노을",     tags:"#노을맛집 #드라이브 #포차",           moodChipIds:["c2"],      location:"인천 · 을왕리 해변",   description:"",bgPreset:"1",bgColor:"#3d1a5c",images:[],thumbnailImageId:null},
+      {id:"sp6", title:"도시 불빛이 내려다보이는 하늘 위의 억새밭",      thumbTitle1:"도시 불빛이 내려다보이는",   thumbTitle2:"하늘 위의 억새밭",       tags:"#야경 #억새 #산책",                   moodChipIds:["c2","c3"], location:"서울 · 하늘공원",      description:"",bgPreset:"5",bgColor:"#0f2d1a",images:[],thumbnailImageId:null},
+      {id:"sp7", title:"파도 소리와 커피 향이 섞이는 강릉 안목해변의 밤", thumbTitle1:"파도 소리와 커피 향이 섞이는",thumbTitle2:"강릉 안목해변의 밤",   tags:"#커피거리 #밤바다 #카페",             moodChipIds:["c1","c4"], location:"강원 강릉 · 안목해변", description:"",bgPreset:"2",bgColor:"#1a0f2d",images:[],thumbnailImageId:null},
+      {id:"sp8", title:"새벽 물안개 속에서 혼자만의 고요한 시간",        thumbTitle1:"새벽 물안개 속에서",         thumbTitle2:"혼자만의 고요한 시간",   tags:"#물안개 #고요 #일출",                 moodChipIds:["c2"],      location:"경기 양평 · 두물머리", description:"",bgPreset:"3",bgColor:"#0d1f3c",images:[],thumbnailImageId:null},
+      {id:"sp9", title:"분수쇼가 물드는 다대포의 황혼",                  thumbTitle1:"분수쇼가 물드는",            thumbTitle2:"다대포의 황혼",          tags:"#낙조 #분수쇼 #드라이브",             moodChipIds:["c2"],      location:"부산 · 다대포해변",    description:"",bgPreset:"4",bgColor:"#2d1a0f",images:[],thumbnailImageId:null},
+      {id:"sp10",title:"할미바위 너머로 지는 꽃지해변 황금빛 일몰",      thumbTitle1:"할미바위 너머로 지는",       thumbTitle2:"꽃지해변 황금빛 일몰",   tags:"#일몰 #갯벌 #캠핑",                   moodChipIds:["c2"],      location:"충남 태안 · 꽃지해변", description:"",bgPreset:"5",bgColor:"#1a2d0f",images:[],thumbnailImageId:null},
+      {id:"sp11",title:"불 꺼진 예술마을을 혼자 걷는 늦은 밤",          thumbTitle1:"불 꺼진 예술마을을",         thumbTitle2:"혼자 걷는 늦은 밤",      tags:"#심야카페 #예술마을 #산책",           moodChipIds:["c1","c3"], location:"경기 파주 · 헤이리",   description:"",bgPreset:"1",bgColor:"#2d0f1a",images:[],thumbnailImageId:null}
+    ],
+    mainPage:{contentSpotIds:["sp1","sp2"],listTitle:"이런 곳은 어때요?",listItemIds:["sp3","sp4","sp5","sp6","sp7","sp8","sp9","sp10","sp11"]},
+    filters:{regions:[{id:'rw',label:'서울서부'},{id:'re',label:'서울동부'},{id:'ri',label:'인천'}]}
+  };
+
+  /* ═══════════════════ STORAGE ═══════════════════ */
+  async function loadData() {
+    const tryParse = key => { try { const s=localStorage.getItem(key); return s?JSON.parse(s):null; } catch(e){return null;} };
+    try {
+      const remote = await SB.get();
+      if (remote && remote.spots && remote.mainPage) {
+        localStorage.setItem(PUB_KEY, JSON.stringify(remote));
+        return migrate(remote);
+      }
+    } catch(e) { console.warn('Supabase load failed, using cache', e); }
+    const pub = tryParse(PUB_KEY);
+    if (pub && pub.spots && pub.mainPage) return migrate(pub);
+    return migrate(JSON.parse(JSON.stringify(DEF)));
+  }
+  function migrate(d) {
+    if (!d.hero) d.hero = JSON.parse(JSON.stringify(DEF.hero));
+    if (!d.hero.headingMode) d.hero.headingMode = 'fixed';
+    if (!d.hero.headingTimed) d.hero.headingTimed = {defaults:[d.hero.heading||''],slots:[]};
+    (d.hero.chips||[]).forEach(c => { if (c.visible === undefined) c.visible = true; });
+    if (!d.filters) d.filters = JSON.parse(JSON.stringify(DEF.filters));
+    d.spots = (d.spots||[]).map(s => ({
+      ...s,
+      title:          s.title         || s.adminTitle  || s.location || '',
+      thumbTitle1:    s.thumbTitle1   || s.headline1   || '',
+      thumbTitle2:    s.thumbTitle2   || s.headline2   || '',
+      regionIds:      Array.isArray(s.regionIds) ? s.regionIds : (s.regionId ? [s.regionId] : []),
+      address:        s.address       || '',
+      addressDetail:  s.addressDetail || '',
+      moodChipIds:    s.moodChipIds   || [],
+      description:    s.description   || '',
+      images:         s.images        || (s.imageUrl ? [{id:'leg_'+s.id,dataUrl:s.imageUrl,name:'image'}] : []),
+      thumbnailImageId: s.thumbnailImageId || (s.imageUrl ? 'leg_'+s.id : null),
+      published:      s.published !== undefined ? s.published : true,
+    }));
+    const existingNums = d.spots.filter(s=>s.spotNumber).map(s=>s.spotNumber);
+    let nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 10001;
+    d.spots.forEach(s => { if (!s.spotNumber) s.spotNumber = nextNum++; });
+    return d;
+  }
+  function saveDraft() {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    hasDraft = true;
+    updateTopbar('draft');
+    toast('임시저장됐습니다 — 미리보기에서 확인하세요.');
+  }
+  async function publishData() {
+    if (!hasDraft) return;
+    const btn = document.getElementById('publish-btn');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '발행 중...';
+    try {
+      await SB.set(data);
+      localStorage.setItem(PUB_KEY, JSON.stringify(data));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      hasDraft = false;
+      updateTopbar('published');
+      toast('발행됐습니다. 사이트에 반영됐습니다.');
+    } catch(e) {
+      btn.textContent = origText;
+      btn.disabled = false;
+      toast('발행 실패: 네트워크를 확인하세요.');
+    }
+  }
+  function updateTopbar(state) {
+    const btn = document.getElementById('publish-btn');
+    const status = document.getElementById('draft-status');
+    const txt = document.getElementById('draft-text');
+    if (state === 'draft') {
+      btn.disabled = false;
+      status.classList.add('has-draft');
+      txt.textContent = '임시저장 완료 · 발행하기를 눌러 사이트에 반영하세요';
+    } else if (state === 'published') {
+      btn.disabled = true;
+      status.classList.remove('has-draft');
+      txt.textContent = '발행 완료';
+      setTimeout(() => { txt.textContent = ''; status.querySelector('.dot').style.background=''; }, 3000);
+    }
+  }
+
+  /* ═══════════════════ HELPERS ═══════════════════ */
+  function uid() { return 'i'+Math.random().toString(36).slice(2,9); }
+  function h(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function eH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function getThumb(spot) {
+    if (spot.images && spot.images.length > 0) {
+      const img = spot.images.find(i=>i.id===spot.thumbnailImageId)||spot.images[0];
+      return img ? img.dataUrl : '';
+    }
+    return '';
+  }
+  function thumbBg(spot) {
+    const u=getThumb(spot);
+    return u ? `background:url('${h(u)}') center/cover no-repeat` : `background-color:${spot.bgColor||'#1a2e4a'}`;
+  }
+  function preClass(spot) { return getThumb(spot) ? '' : `sp${spot.bgPreset||'1'}`; }
+  function toast(msg) {
+    const t=document.createElement('div');
+    t.textContent=msg;
+    Object.assign(t.style,{position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',
+      background:'rgba(22,163,74,0.10)',border:'1px solid rgba(22,163,74,0.28)',
+      color:'rgba(15,118,54,1)',padding:'9px 20px',borderRadius:'10px',
+      fontSize:'13px',fontWeight:'700',zIndex:'999',transition:'opacity .35s',pointerEvents:'none'});
+    document.body.appendChild(t);
+    setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),380);},2200);
+  }
+
+  /* ═══════════════════ NAVIGATION ═══════════════════ */
+  function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+    const p=document.getElementById('panel-'+name); if(p) p.classList.add('active');
+    const n=document.getElementById('nav-'+name); if(n) n.classList.add('active');
+    if (name==='library')  renderLib();
+    if (name==='hero')     renderHero();
+    if (name==='curation') renderCur();
+    if (name==='filters')  renderFilters();
+    if (name==='backup')   { cancelRestore(); refreshBackupSummary(); }
+  }
+
+  /* ═══════════════════ LIBRARY ═══════════════════ */
+  function getFilteredSpots() {
+    if (!libSearch) return data.spots;
+    const q = libSearch.toLowerCase();
+    return data.spots.filter(s =>
+      (s.title||'').toLowerCase().includes(q) ||
+      (s.location||'').toLowerCase().includes(q) ||
+      (s.tags||'').toLowerCase().includes(q) ||
+      String(s.spotNumber||'').includes(q)
+    );
+  }
+  function onLibSearch(v) { libSearch = v.trim(); libPage = 1; renderLib(); }
+  function goLibPage(p) {
+    libPage = p; renderLib();
+    document.getElementById('panel-library').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function renderLibSummary() {
+    const el = document.getElementById('lib-summary');
+    if (!el) return;
+    const all = data.spots || [];
+    const pub = all.filter(s => s.published !== false).length;
+    const priv = all.length - pub;
+    el.innerHTML = `
+      <div class="lib-sum-item"><span>전체</span><strong>${all.length}</strong><span>개</span></div>
+      <div class="lib-sum-sep"></div>
+      <div class="lib-sum-item"><span>공개</span><strong style="color:var(--g-text)">${pub}</strong><span>개</span></div>
+      <div class="lib-sum-sep"></div>
+      <div class="lib-sum-item"><span>비공개</span><strong style="color:rgba(0,0,0,0.40)">${priv}</strong><span>개</span></div>`;
+  }
+  function renderLib() {
+    renderLibSummary();
+    const filtered = getFilteredSpots();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / LIB_PER_PAGE));
+    if (libPage > totalPages) libPage = totalPages;
+    const pageSpots = filtered.slice((libPage-1)*LIB_PER_PAGE, libPage*LIB_PER_PAGE);
+    const outer = document.getElementById('lib-list-outer');
+
+    if (!filtered.length) {
+      outer.innerHTML = `<div class="lib-empty">${libSearch ? '검색 결과가 없습니다.' : '아직 스팟이 없습니다.<br><strong style="color:rgba(0,0,0,0.52);">새 스팟</strong> 버튼으로 첫 콘텐츠를 작성해보세요.'}</div>`;
+      document.getElementById('lib-pagination').innerHTML = '';
+      updateBulkBar(); return;
+    }
+    const allPageSel = pageSpots.length > 0 && pageSpots.every(s => libSelected.has(s.id));
+    outer.innerHTML = `
+      <div class="lib-head">
+        <input type="checkbox" class="lib-cb" id="lib-sel-all" ${allPageSel?'checked':''} onchange="toggleSelectAll(this)">
+        <span class="lib-num" style="color:var(--dim);font-size:10.5px;">번호</span>
+        <div style="width:46px;flex-shrink:0;"></div>
+        <div class="lib-body" style="font-size:10.5px;font-weight:700;color:var(--dim);">스팟명</div>
+        <div style="flex-shrink:0;width:160px;"></div>
+      </div>
+      <div id="lib-list">${pageSpots.map(s=>{
+        const ic=(s.images||[]).length, mc=(s.moodChipIds||[]).length;
+        const meta=[s.location,ic?`이미지 ${ic}개`:null,mc?`무드 ${mc}개`:null].filter(Boolean).join(' · ');
+        const isSel=libSelected.has(s.id), isPub=s.published!==false;
+        return `<div class="lib-row${isSel?' sel':''}" onclick="openSpotForm('${h(s.id)}')">
+          <input type="checkbox" class="lib-cb" ${isSel?'checked':''} onclick="event.stopPropagation();toggleSelect('${h(s.id)}',this)">
+          <span class="lib-num">${String(s.spotNumber||'').padStart(5,'0')}</span>
+          <div class="lib-thumb ${preClass(s)}" style="${thumbBg(s)}">
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.48),transparent);border-radius:8px;pointer-events:none;"></div>
+          </div>
+          <div class="lib-body">
+            <div class="lib-title">${h(s.title||s.location||'무제')}</div>
+            <div class="lib-meta">${h(meta)}</div>
+          </div>
+          <div class="lib-acts">
+            <button class="pub-tog ${isPub?'on':'off'}" onclick="event.stopPropagation();togglePublished('${h(s.id)}')">${isPub?'공개':'비공개'}</button>
+            <button class="btn btn-g btn-sm" onclick="event.stopPropagation();openSpotForm('${h(s.id)}')">편집</button>
+            <button class="btn btn-d btn-sm" style="padding:0 8px;" onclick="event.stopPropagation();delSpot('${h(s.id)}',false)" title="삭제">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
+    renderLibPagination(totalPages);
+    updateBulkBar();
+  }
+
+  function renderLibPagination(totalPages) {
+    const el = document.getElementById('lib-pagination');
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    let html = `<button class="pg-btn" onclick="goLibPage(${libPage-1})" ${libPage===1?'disabled':''}>‹</button>`;
+    for (let i=1; i<=totalPages; i++)
+      html += `<button class="pg-btn${i===libPage?' active':''}" onclick="goLibPage(${i})">${i}</button>`;
+    html += `<button class="pg-btn" onclick="goLibPage(${libPage+1})" ${libPage===totalPages?'disabled':''}>›</button>`;
+    el.innerHTML = html;
+  }
+
+  function toggleSelectAll(cb) {
+    const filtered = getFilteredSpots();
+    const pageSpots = filtered.slice((libPage-1)*LIB_PER_PAGE, libPage*LIB_PER_PAGE);
+    pageSpots.forEach(s => cb.checked ? libSelected.add(s.id) : libSelected.delete(s.id));
+    renderLib();
+  }
+  function toggleSelect(id, cb) {
+    if (cb.checked) libSelected.add(id); else libSelected.delete(id);
+    const row = cb.closest('.lib-row');
+    if (row) row.classList.toggle('sel', cb.checked);
+    updateBulkBar();
+    const filtered = getFilteredSpots();
+    const pageSpots = filtered.slice((libPage-1)*LIB_PER_PAGE, libPage*LIB_PER_PAGE);
+    const el = document.getElementById('lib-sel-all');
+    if (el) el.checked = pageSpots.length > 0 && pageSpots.every(s => libSelected.has(s.id));
+  }
+  function updateBulkBar() {
+    const bar = document.getElementById('lib-bulk-bar');
+    const cnt = document.getElementById('lib-bulk-count');
+    if (!bar) return;
+    if (libSelected.size > 0) { bar.style.display='flex'; cnt.textContent=`${libSelected.size}개 선택`; }
+    else bar.style.display = 'none';
+  }
+  function togglePublished(id) {
+    const s = data.spots.find(sp=>sp.id===id); if(!s) return;
+    s.published = !s.published; renderLib();
+  }
+  function bulkSetPublished(val) {
+    libSelected.forEach(id => { const s=data.spots.find(sp=>sp.id===id); if(s) s.published=val; });
+    renderLib();
+  }
+  function openBulkDelModal() {
+    document.getElementById('modal-del-cnt').textContent = libSelected.size;
+    document.getElementById('del-confirm-input').value = '';
+    document.getElementById('del-err').textContent = '';
+    document.getElementById('bulk-del-modal').classList.add('open');
+  }
+  function closeBulkDelModal() { document.getElementById('bulk-del-modal').classList.remove('open'); }
+  function onDelInput() { document.getElementById('del-err').textContent = ''; }
+  function executeBulkDelete() {
+    if (document.getElementById('del-confirm-input').value.trim() !== '삭제') {
+      document.getElementById('del-err').textContent = '정확히 입력해주세요.'; return;
+    }
+    const cnt = libSelected.size;
+    data.spots = data.spots.filter(s => !libSelected.has(s.id));
+    data.mainPage.contentSpotIds = data.mainPage.contentSpotIds.filter(id => !libSelected.has(id));
+    data.mainPage.listItemIds    = data.mainPage.listItemIds.filter(id => !libSelected.has(id));
+    libSelected.clear(); closeBulkDelModal();
+    toast(`스팟 ${cnt}개가 삭제됐습니다.`); renderLib();
+  }
+
+  function delSpot(id, fromForm) {
+    if (!confirm('스팟을 삭제하면 메인 편집에서도 제거됩니다. 계속할까요?')) return;
+    data.spots = data.spots.filter(s=>s.id!==id);
+    data.mainPage.contentSpotIds = data.mainPage.contentSpotIds.filter(x=>x!==id);
+    data.mainPage.listItemIds    = data.mainPage.listItemIds.filter(x=>x!==id);
+    libSelected.delete(id);
+    showPanel('library');
+  }
+
+  /* ═══════════════════ SPOT FORM ═══════════════════ */
+  function openSpotForm(id) {
+    editingSpotId = id;
+    formSpot = id ? JSON.parse(JSON.stringify(data.spots.find(s=>s.id===id)||defSpot())) : defSpot();
+    renderSpotForm();
+    showPanel('spot-form');
+  }
+  function genSpotNum() {
+    const nums = (data.spots||[]).map(s=>s.spotNumber).filter(Boolean);
+    return nums.length > 0 ? Math.max(...nums) + 1 : 10001;
+  }
+  function defSpot() {
+    return {id:uid(),spotNumber:genSpotNum(),published:true,title:'',thumbTitle1:'',thumbTitle2:'',location:'',address:'',addressDetail:'',tags:'',regionIds:[],moodChipIds:[],description:'',bgPreset:'1',bgColor:'#1a2e4a',images:[],thumbnailImageId:null};
+  }
+
+  function renderSpotForm() {
+    const panel=document.getElementById('panel-spot-form');
+    const isNew=!editingSpotId;
+    const preset=formSpot.bgPreset||'1';
+    const tu=getThumb(formSpot);
+    const swatches=[1,2,3,4,5].map(n=>`
+      <div class="psw sp${n}${preset===String(n)?' sel':''}" onclick="setPreset('${n}')" title="프리셋 ${n}"></div>`).join('');
+
+    panel.innerHTML=`
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
+        <button class="btn btn-g btn-sm" onclick="showPanel('library')" style="flex-shrink:0;">← 목록</button>
+        <h2 class="pg-title" style="flex:1;margin:0;">${isNew?'새 스팟 작성':'스팟 편집'}</h2>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          ${!isNew?`<button class="btn btn-d btn-sm" onclick="delSpot('${h(formSpot.id)}',true)">삭제</button>`:''}
+          <button class="btn btn-p btn-sm" onclick="saveSpot()">적용</button>
+        </div>
+      </div>
+
+      <div class="form-prev${tu?'':' sp'+preset}" id="fp-bg"${tu?` style="background:url('${h(tu)}') center/cover no-repeat;"`:''}>
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.82) 0%,transparent 68%);pointer-events:none;"></div>
+        <div style="position:absolute;bottom:13px;left:15px;right:15px;">
+          <p id="pv-tags" style="font-size:10.5px;font-weight:700;color:rgba(255,196,0,0.80);margin:0 0 3px;">${h(formSpot.tags)}</p>
+          <p id="pv-th1"  style="font-size:16px;font-weight:800;color:#fff;line-height:1.25;margin:0;">${h(formSpot.thumbTitle1)}</p>
+          <p id="pv-th2"  style="font-size:16px;font-weight:800;color:#fff;line-height:1.25;margin:0;">${h(formSpot.thumbTitle2)}</p>
+          <p id="pv-loc"  style="font-size:11px;color:rgba(255,255,255,0.60);margin:4px 0 0;">${h(formSpot.location)}</p>
+        </div>
+      </div>
+
+      <div class="card"><label>제목 (노출)</label>
+        <input type="text" id="f-title" value="${h(formSpot.title||'')}" placeholder="사이트에 표시될 스팟 제목" oninput="formSpot.title=this.value">
+      </div>
+
+      <div class="card"><p class="card-lbl">썸네일 제목 (풀스크린 오버레이)</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label>1행</label>
+            <input type="text" id="f-th1" value="${h(formSpot.thumbTitle1||'')}" placeholder="첫째 줄" oninput="formSpot.thumbTitle1=this.value;pvSync()">
+          </div>
+          <div><label>2행</label>
+            <input type="text" id="f-th2" value="${h(formSpot.thumbTitle2||'')}" placeholder="둘째 줄" oninput="formSpot.thumbTitle2=this.value;pvSync()">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label>장소명</label>
+            <input type="text" id="f-loc" value="${h(formSpot.location||'')}" placeholder="지역 · 장소명" oninput="formSpot.location=this.value;pvSync()">
+          </div>
+          <div><label>태그</label>
+            <input type="text" id="f-tags" value="${h(formSpot.tags||'')}" placeholder="#태그1 #태그2" oninput="formSpot.tags=this.value;pvSync()">
+          </div>
+        </div>
+      </div>
+
+      <div class="card"><p class="card-lbl" style="margin-bottom:10px;">주소</p>
+        <input type="text" id="f-address" value="${h(formSpot.address||'')}" placeholder="도로명 주소" oninput="formSpot.address=this.value" style="margin-bottom:10px;">
+        <label>상세 주소</label>
+        <input type="text" id="f-address-detail" value="${h(formSpot.addressDetail||'')}" placeholder="동·호수, 건물명 등" oninput="formSpot.addressDetail=this.value">
+      </div>
+
+      <div class="card"><p class="card-lbl" style="margin-bottom:10px;">무드 칩 연동</p>
+        <div id="f-moods" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+      </div>
+
+      <div class="card"><p class="card-lbl" style="margin-bottom:10px;">출발지 연동</p>
+        <div id="f-regions" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+      </div>
+
+      <div class="card"><label>본문 내용</label>
+        <textarea id="f-desc" rows="5" placeholder="스팟 소개, 추천 시간대, 가는 방법 등을 자유롭게 작성하세요." oninput="formSpot.description=this.value">${eH(formSpot.description||'')}</textarea>
+      </div>
+
+      <div class="card"><p class="card-lbl" style="margin-bottom:13px;">배경 설정 (이미지 없을 때 사용)</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div><label>배경 프리셋</label>
+            <div style="display:flex;gap:7px;margin-top:4px;">${swatches}</div>
+          </div>
+          <div><label>리스트 썸네일 색상</label>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+              <input type="color" value="${h(formSpot.bgColor||'#1a2e4a')}" onchange="formSpot.bgColor=this.value;document.getElementById('bgcode').textContent=this.value"
+                style="width:36px;height:36px;padding:2px;border-radius:7px;cursor:pointer;flex-shrink:0;background:none;border:1px solid var(--border);">
+              <code id="bgcode" style="font-size:11.5px;color:rgba(0,0,0,0.40);">${h(formSpot.bgColor||'#1a2e4a')}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+          <p class="card-lbl" style="margin-bottom:0;">이미지 업로드 (최대 8개)</p>
+          <span id="img-cnt" style="font-size:11.5px;color:rgba(0,0,0,0.36);">${(formSpot.images||[]).length}/8</span>
+        </div>
+        <div class="img-grd" id="img-grd"></div>
+        <p style="font-size:11px;color:rgba(0,0,0,0.36);margin-top:9px;line-height:1.6;">★ 이미지 클릭 → 썸네일 지정. 썸네일은 리스트 카드와 미리보기에 표시됩니다.</p>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding-bottom:60px;">
+        ${!isNew?`<button class="btn btn-d btn-sm" onclick="delSpot('${h(formSpot.id)}',true)">삭제</button>`:''}
+        <button class="btn btn-p btn-sm" onclick="saveSpot()">적용</button>
+      </div>`;
+
+    renderImgGrd();
+    renderMoodPicker();
+    renderRegionPicker();
+  }
+
+  function pvSync() {
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v||'';};
+    set('pv-tags',formSpot.tags); set('pv-th1',formSpot.thumbTitle1);
+    set('pv-th2',formSpot.thumbTitle2); set('pv-loc',formSpot.location);
+  }
+  function setPreset(n) {
+    formSpot.bgPreset=String(n);
+    const bg=document.getElementById('fp-bg');
+    if (bg && !getThumb(formSpot)) { bg.className=`form-prev sp${n}`; bg.style.background=''; }
+    document.querySelectorAll('.psw').forEach((el,i)=>el.classList.toggle('sel',i+1===Number(n)));
+  }
+  function syncFpBg() {
+    const bg=document.getElementById('fp-bg'); if(!bg) return;
+    const u=getThumb(formSpot);
+    if(u){bg.className='form-prev';bg.style.background=`url('${h(u)}') center/cover no-repeat`;}
+    else{bg.className=`form-prev sp${formSpot.bgPreset||'1'}`;bg.style.background='';}
+  }
+
+  /* Image grid */
+  function renderImgGrd() {
+    const grid=document.getElementById('img-grd'); if(!grid) return;
+    const imgs=formSpot.images||[];
+    grid.innerHTML='';
+    imgs.forEach(img=>{
+      const isTh=formSpot.thumbnailImageId===img.id;
+      const cell=document.createElement('div');
+      cell.className='img-cell'+(isTh?' is-th':'');
+      cell.innerHTML=`
+        <img src="${h(img.dataUrl)}" alt="">
+        <button type="button" onclick="setThumb('${h(img.id)}')" title="${isTh?'썸네일 지정됨':'썸네일로 지정'}"
+          style="position:absolute;top:4px;left:4px;width:23px;height:23px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+            background:${isTh?'rgba(22,163,74,0.22)':'rgba(0,0,0,0.56)'};
+            border:1px solid ${isTh?'rgba(22,163,74,0.55)':'rgba(0,0,0,0.20)'};transition:all .14s;">
+          <svg width="11" height="11" fill="${isTh?'rgba(15,118,54,0.92)':'rgba(0,0,0,0.40)'}" viewBox="0 0 24 24">
+            <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+          </svg>
+        </button>
+        <button type="button" onclick="rmImg('${h(img.id)}')"
+          style="position:absolute;top:4px;right:4px;width:23px;height:23px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.52);border:1px solid rgba(255,255,255,0.22);font-size:11px;color:rgba(255,255,255,0.90);">✕</button>
+        ${isTh?'<div style="position:absolute;bottom:0;left:0;right:0;padding:2px;background:rgba(22,163,74,0.18);text-align:center;font-size:9px;font-weight:700;color:#fff;letter-spacing:.03em;">썸네일</div>':''}`;
+      grid.appendChild(cell);
+    });
+    for(let i=0;i<8-imgs.length;i++){
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='img-add'; btn.title='이미지 추가';
+      btn.innerHTML=`<svg width="18" height="18" fill="none" stroke="rgba(0,0,0,0.26)" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>`;
+      btn.addEventListener('click',()=>trigUp('form-img'));
+      grid.appendChild(btn);
+    }
+    const cnt=document.getElementById('img-cnt'); if(cnt) cnt.textContent=`${imgs.length}/8`;
+  }
+  function setThumb(id) {
+    formSpot.thumbnailImageId=(formSpot.thumbnailImageId===id)?null:id;
+    syncFpBg(); renderImgGrd();
+  }
+  function rmImg(id) {
+    formSpot.images=(formSpot.images||[]).filter(i=>i.id!==id);
+    if(formSpot.thumbnailImageId===id) formSpot.thumbnailImageId=formSpot.images.length?formSpot.images[0].id:null;
+    syncFpBg(); renderImgGrd();
+  }
+
+  /* Mood picker */
+  function renderMoodPicker() {
+    const c=document.getElementById('f-moods'); if(!c) return;
+    const chips=data.hero.chips||[];
+    if(!chips.length){c.innerHTML=`<p style="font-size:12px;color:rgba(0,0,0,0.32);">첫페이지 편집에서 무드 칩을 먼저 추가해주세요.</p>`;return;}
+    c.innerHTML='';
+    chips.forEach(chip=>{
+      const on=(formSpot.moodChipIds||[]).includes(chip.id);
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className=`mood-btn ${on?'on':'off'}`; btn.textContent=chip.label;
+      btn.onclick=()=>{
+        if(!formSpot.moodChipIds) formSpot.moodChipIds=[];
+        const idx=formSpot.moodChipIds.indexOf(chip.id);
+        if(idx>=0) formSpot.moodChipIds.splice(idx,1); else formSpot.moodChipIds.push(chip.id);
+        renderMoodPicker();
+      };
+      c.appendChild(btn);
+    });
+  }
+
+  function saveSpot() {
+    if(!formSpot.title&&!formSpot.thumbTitle1&&!formSpot.location){alert('제목 또는 장소명을 입력해주세요.');return;}
+    const idx=data.spots.findIndex(s=>s.id===formSpot.id);
+    if(idx>=0) data.spots[idx]=formSpot; else data.spots.push(formSpot);
+    showPanel('library');
+  }
+
+  /* ═══════════════════ FILE UPLOAD ═══════════════════ */
+  function trigUp(ctx) {
+    uploadCtx=ctx;
+    if(ctx==='form-img'){
+      const r=8-(formSpot.images||[]).length;
+      if(r<=0){alert('최대 8개까지 업로드할 수 있습니다.');return;}
+      document.getElementById('fi').multiple=true;
+    } else { document.getElementById('fi').multiple=false; }
+    document.getElementById('fi').value='';
+    document.getElementById('fi').click();
+  }
+  function handleFile(evt) {
+    const files=[...evt.target.files]; if(!files.length) return;
+    if(uploadCtx==='form-img') {
+      const r=8-(formSpot.images||[]).length;
+      files.slice(0,r).forEach(f=>resizeImg(f));
+    }
+  }
+  function resizeImg(file) {
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const M=900; let w=img.width,hh=img.height;
+        if(w>M){hh=Math.round(hh*M/w);w=M;} if(hh>M){w=Math.round(w*M/hh);hh=M;}
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=hh;
+        cv.getContext('2d').drawImage(img,0,0,w,hh);
+        const du=cv.toDataURL('image/jpeg',0.82);
+        if(!formSpot.images) formSpot.images=[];
+        const ni={id:uid(),dataUrl:du,name:file.name};
+        formSpot.images.push(ni);
+        if(!formSpot.thumbnailImageId){formSpot.thumbnailImageId=ni.id;syncFpBg();}
+        renderImgGrd();
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ═══════════════════ HERO PANEL ═══════════════════ */
+  function renderHero() {
+    document.getElementById('hero-hint').value = data.hero.scrollHint||'';
+    openIconIdx = null;
+    renderHeadingEditor();
+    renderChips();
+  }
+
+  function renderHeadingEditor() {
+    const mode = data.hero.headingMode || 'fixed';
+    document.getElementById('htab-btn-fixed').classList.toggle('active', mode==='fixed');
+    document.getElementById('htab-btn-timed').classList.toggle('active', mode==='timed');
+    document.getElementById('htab-fixed').style.display = mode==='fixed' ? '' : 'none';
+    document.getElementById('htab-timed').style.display = mode==='timed' ? '' : 'none';
+    if (mode==='fixed') {
+      document.getElementById('hero-heading').value = data.hero.heading||'';
+    } else {
+      renderTimedEditor();
+    }
+  }
+  function setHeadingMode(mode) {
+    data.hero.headingMode = mode;
+    renderHeadingEditor();
+  }
+  function renderTimedEditor() {
+    const td = data.hero.headingTimed;
+    document.getElementById('hdef-list').innerHTML = (td.defaults||[]).map((t,i)=>`
+      <div class="hdef-row">
+        <input type="text" value="${h(t)}" placeholder="기본 헤딩 텍스트 ${i+1}" oninput="data.hero.headingTimed.defaults[${i}]=this.value" style="flex:1;">
+        ${(td.defaults.length>1)?`<button class="ico-btn" onclick="rmHeadingDefault(${i})"><svg width="12" height="12" stroke="rgba(239,68,68,.7)" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>`:''}
+      </div>`).join('');
+    const addBtn = document.getElementById('hdef-add-btn');
+    if (addBtn) addBtn.style.display = (td.defaults||[]).length >= 3 ? 'none' : '';
+    renderTimedSlots();
+  }
+  function renderTimedSlots() {
+    const slots = data.hero.headingTimed.slots || [];
+    document.getElementById('hslot-list').innerHTML = slots.map((slot,si)=>`
+      <div class="hslot">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:12px;font-weight:700;color:rgba(0,0,0,0.50);flex:1;">시간대 ${si+1}</span>
+          <button class="btn btn-g btn-sm" style="padding:0 8px;" onclick="dupHeadingSlot(${si})" title="복제"><svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+          <button class="btn btn-d btn-sm" style="padding:0 8px;" onclick="rmHeadingSlot(${si})" title="삭제"><svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div class="hslot-hours">${Array.from({length:24},(_,hr)=>`<div class="hslot-hour${(slot.hours||[]).includes(hr)?' on':''}" onclick="toggleSlotHour(${si},${hr})">${String(hr).padStart(2,'0')}</div>`).join('')}</div>
+        <input type="text" value="${h(slot.text||'')}" placeholder="해당 시간대 헤딩 텍스트" oninput="data.hero.headingTimed.slots[${si}].text=this.value">
+      </div>`).join('');
+    const addBtn = document.getElementById('hslot-add-btn');
+    if (addBtn) addBtn.style.display = slots.length >= 20 ? 'none' : '';
+  }
+  function addHeadingDefault() {
+    if ((data.hero.headingTimed.defaults||[]).length >= 3) return;
+    data.hero.headingTimed.defaults.push('');
+    renderTimedEditor();
+  }
+  function rmHeadingDefault(i) {
+    data.hero.headingTimed.defaults.splice(i,1);
+    renderTimedEditor();
+  }
+  function addHeadingSlot() {
+    if ((data.hero.headingTimed.slots||[]).length >= 20) return;
+    data.hero.headingTimed.slots.push({hours:[],text:''});
+    renderTimedSlots();
+  }
+  function dupHeadingSlot(i) {
+    if ((data.hero.headingTimed.slots||[]).length >= 20) return;
+    const src = data.hero.headingTimed.slots[i];
+    data.hero.headingTimed.slots.splice(i+1, 0, {hours:[...src.hours], text:src.text});
+    renderTimedSlots();
+  }
+  function rmHeadingSlot(i) {
+    data.hero.headingTimed.slots.splice(i,1);
+    renderTimedSlots();
+  }
+  function toggleSlotHour(si, hr) {
+    const slot = data.hero.headingTimed.slots[si];
+    if (!slot.hours) slot.hours = [];
+    const idx = slot.hours.indexOf(hr);
+    if (idx >= 0) slot.hours.splice(idx,1); else slot.hours.push(hr);
+    renderTimedSlots();
+  }
+
+  function renderChips() {
+    const chips = data.hero.chips || [];
+    document.getElementById('chips-list').innerHTML = chips.length === 0
+      ? `<p style="font-size:12.5px;color:rgba(0,0,0,0.32);padding:6px 0;">필터 관리에서 무드 칩을 추가해주세요.</p>`
+      : chips.map((c,i)=>`
+        <div class="chip-row" draggable="true"
+          ondragstart="chipDragStart(${i})"
+          ondragover="event.preventDefault();chipDragOver(this)"
+          ondragleave="chipDragLeave(this)"
+          ondrop="chipDrop(${i})">
+          <div class="chip-row-inner">
+            <div class="chip-drag-handle" title="드래그하여 순서 변경">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </div>
+            <span style="flex-shrink:0;opacity:.50;">${makeIconSvg(c.icon,14)}</span>
+            <span style="flex:1;font-size:13px;color:rgba(0,0,0,0.75);">${h(c.label)}</span>
+            <button class="pub-tog ${c.visible!==false?'on':'off'}" onclick="toggleChipVisible(${i})">${c.visible!==false?'노출':'숨김'}</button>
+          </div>
+        </div>`).join('');
+    renderFilterChips();
+  }
+  function toggleChipVisible(i) {
+    data.hero.chips[i].visible = data.hero.chips[i].visible === false;
+    renderChips();
+  }
+  function chipDragStart(i) { chipDragIdx = i; }
+  function chipDragOver(el) { el.classList.add('drag-over'); }
+  function chipDragLeave(el) { el.classList.remove('drag-over'); }
+  function chipDrop(targetI) {
+    document.querySelectorAll('.chip-row.drag-over').forEach(el=>el.classList.remove('drag-over'));
+    if (chipDragIdx === null || chipDragIdx === targetI) { chipDragIdx=null; return; }
+    const chips = data.hero.chips;
+    const [moved] = chips.splice(chipDragIdx, 1);
+    chips.splice(targetI, 0, moved);
+    chipDragIdx = null;
+    renderChips();
+  }
+
+  function renderIconPicker(chipIdx, currentIcon) {
+    const cells = ALL_ICON_KEYS.map(key=>`
+      <div class="ico-cell${currentIcon===key?' sel':''}" onclick="selectIcon(${chipIdx},'${key}')">
+        ${makeIconSvg(key,17)}
+        <span>${ICON_LABELS[key]||key}</span>
+      </div>`).join('');
+    return `<div class="ico-picker">${cells}</div>`;
+  }
+
+  function toggleIconPicker(i) {
+    openIconIdx = (openIconIdx===i) ? null : i;
+    renderChips();
+  }
+  function selectIcon(chipIdx, key) {
+    data.hero.chips[chipIdx].icon = key;
+    openIconIdx = null;
+    renderChips();
+  }
+  function addChip() { data.hero.chips.push({id:uid(),icon:'star',label:'새 칩',visible:true}); openIconIdx=null; renderChips(); }
+  function rmChip(i) { data.hero.chips.splice(i,1); openIconIdx=null; renderChips(); }
+
+  /* ═══════════════════ FILTERS PANEL ═══════════════════ */
+  function renderFilters() {
+    renderFilterChips();
+    renderFilterRegions();
+  }
+
+  function renderFilterChips() {
+    const el = document.getElementById('flt-chips-list'); if(!el) return;
+    el.innerHTML = (data.hero.chips||[]).map((c,i)=>`
+      <div class="chip-row" id="flt-chip-row-${i}">
+        <div class="chip-row-inner">
+          <button type="button" class="ico-pick-btn${openIconIdx===i?' open':''}" onclick="toggleIconPicker(${i})" title="아이콘 변경">
+            ${makeIconSvg(c.icon,16)}
+          </button>
+          <input type="text" value="${h(c.label)}" placeholder="무드 이름"
+            oninput="data.hero.chips[${i}].label=this.value" style="flex:1;">
+          <button class="ico-btn" onclick="rmChip(${i})" title="삭제">
+            <svg width="12" height="12" stroke="rgba(239,68,68,0.70)" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        ${openIconIdx===i ? renderIconPicker(i, c.icon) : ''}
+      </div>`).join('');
+  }
+
+  function renderFilterRegions() {
+    const el = document.getElementById('flt-regions-list'); if(!el) return;
+    const regions = (data.filters && data.filters.regions) || [];
+    if(!regions.length){
+      el.innerHTML=`<p style="font-size:12px;color:rgba(0,0,0,0.32);padding:4px 0;">아직 출발지가 없습니다. 위 버튼으로 추가해주세요.</p>`;
+      return;
+    }
+    el.innerHTML = regions.map((r,i)=>`
+      <div class="chip-row">
+        <div class="chip-row-inner">
+          <input type="text" value="${h(r.label)}" placeholder="출발지 이름"
+            oninput="data.filters.regions[${i}].label=this.value" style="flex:1;">
+          <button class="ico-btn" onclick="rmRegion(${i})" title="삭제">
+            <svg width="12" height="12" stroke="rgba(239,68,68,0.70)" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>`).join('');
+  }
+
+  function addRegion() {
+    if(!data.filters) data.filters={regions:[]};
+    if(!data.filters.regions) data.filters.regions=[];
+    data.filters.regions.push({id:uid(),label:'새 출발지'});
+    renderFilterRegions();
+    renderRegionPicker();
+  }
+
+  function rmRegion(i) {
+    data.filters.regions.splice(i,1);
+    renderFilterRegions();
+    renderRegionPicker();
+  }
+
+  function renderRegionPicker() {
+    const c = document.getElementById('f-regions'); if(!c) return;
+    const regions = (data.filters && data.filters.regions) || [];
+    if(!regions.length){
+      c.innerHTML=`<p style="font-size:12px;color:rgba(0,0,0,0.32);">필터 관리에서 출발지를 먼저 추가해주세요.</p>`;
+      return;
+    }
+    if(!Array.isArray(formSpot.regionIds)) formSpot.regionIds=[];
+    c.innerHTML='';
+    regions.forEach(region=>{
+      const on=formSpot.regionIds.includes(region.id);
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className=`mood-btn ${on?'on':'off'}`;
+      btn.textContent=region.label;
+      btn.onclick=()=>{
+        const idx=formSpot.regionIds.indexOf(region.id);
+        if(idx>=0) formSpot.regionIds.splice(idx,1); else formSpot.regionIds.push(region.id);
+        renderRegionPicker();
+      };
+      c.appendChild(btn);
+    });
+  }
+
+
+  /* ═══════════════════ CURATION PANEL ═══════════════════ */
+  function renderCur() {
+    document.getElementById('cur-title').value = data.mainPage.listTitle||'';
+    renderCurSec('content');
+    renderCurSec('list');
+  }
+  function renderCurSec(type) {
+    const ids = type==='content' ? data.mainPage.contentSpotIds : data.mainPage.listItemIds;
+    const el  = document.getElementById('cur-'+type);
+    el.innerHTML = ids.map((id,i)=>{
+      const s=data.spots.find(sp=>sp.id===id); if(!s) return '';
+      return `
+        <div class="cur-slot" draggable="true"
+          ondragstart="curDragStart('${type}',${i})"
+          ondragover="event.preventDefault();curDragOver(this)"
+          ondragleave="curDragLeave(this)"
+          ondrop="curDrop('${type}',${i})">
+          <div class="cur-drag-handle">
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </div>
+          <div class="cur-thumb ${preClass(s)}" style="${thumbBg(s)}"></div>
+          <div class="cur-body">
+            <div class="cur-title">${h(s.title||s.location||'무제')}</div>
+            <div class="cur-loc">${h(s.location||'')}</div>
+          </div>
+          <div class="cur-acts">
+            <button class="ico-btn" onclick="rmCur('${type}','${h(id)}')">
+              <svg width="10" height="10" stroke="rgba(239,68,68,0.65)" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  function curDragStart(type,i) { curDragType=type; curDragIdx=i; }
+  function curDragOver(el) { el.classList.add('cur-drag-over'); }
+  function curDragLeave(el) { el.classList.remove('cur-drag-over'); }
+  function curDrop(type,i) {
+    document.querySelectorAll('.cur-slot.cur-drag-over').forEach(el=>el.classList.remove('cur-drag-over'));
+    if (curDragType!==type||curDragIdx===null||curDragIdx===i) { curDragIdx=null; return; }
+    const arr=type==='content'?data.mainPage.contentSpotIds:data.mainPage.listItemIds;
+    const [moved]=arr.splice(curDragIdx,1); arr.splice(i,0,moved);
+    curDragIdx=null; curDragType=null; renderCurSec(type);
+  }
+  function rmCur(type,id) {
+    if(type==='content') data.mainPage.contentSpotIds=data.mainPage.contentSpotIds.filter(x=>x!==id);
+    else data.mainPage.listItemIds=data.mainPage.listItemIds.filter(x=>x!==id);
+    renderCurSec(type);
+  }
+
+  /* ═══════════════════ SPOT PICKER ═══════════════════ */
+  function openPicker(target) {
+    pickerTarget=target; pickerSearch=''; pickerSel=new Set();
+    document.getElementById('pk-title').textContent=target==='content'?'콘텐츠 스팟 선택':'리스트 스팟 선택';
+    document.getElementById('pk-search').value='';
+    renderPickerList();
+    document.getElementById('picker-ov').classList.add('open');
+  }
+  function renderPickerList() {
+    const added=pickerTarget==='content'?data.mainPage.contentSpotIds:data.mainPage.listItemIds;
+    const q=pickerSearch.trim().toLowerCase();
+    const spots=(data.spots||[]).filter(s=>{
+      if(!q) return true;
+      return (s.title||'').toLowerCase().includes(q)||(s.location||'').toLowerCase().includes(q)||String(s.spotNumber||'').includes(q)||(s.tags||'').toLowerCase().includes(q);
+    });
+    const selCnt=[...pickerSel].filter(id=>!added.includes(id)).length;
+    const addBtn=document.getElementById('pk-add-btn');
+    addBtn.disabled=selCnt===0;
+    document.getElementById('pk-sel-cnt').textContent=selCnt;
+    document.getElementById('pk-list').innerHTML=spots.length===0
+      ?`<div style="padding:36px;text-align:center;color:rgba(0,0,0,0.30);font-size:13px;">검색 결과가 없습니다.</div>`
+      :spots.map(s=>{
+        const isAdded=added.includes(s.id), isSel=pickerSel.has(s.id);
+        const tu=getThumb(s);
+        return `<div class="pk-row${isAdded?' dis':''}${isSel?' sel':''}" onclick="${isAdded?'':'togglePickerRow(\''+h(s.id)+'\')'}">
+          <input type="checkbox" class="pk-row-cb" ${isSel?'checked':''} ${isAdded?'disabled':''} onclick="event.stopPropagation();togglePickerCheck('${h(s.id)}',this)">
+          <div class="pk-row-thumb ${preClass(s)}" style="${tu?`background:url('${h(tu)}') center/cover no-repeat`:thumbBg(s)}"></div>
+          <div class="pk-row-body">
+            <div class="pk-row-title">${h(s.title||s.location||'무제')}</div>
+            <div class="pk-row-meta">${String(s.spotNumber||'').padStart(5,'0')} · ${h(s.location||'')}</div>
+          </div>
+          ${isAdded?'<span class="pk-added">추가됨</span>':''}
+        </div>`;
+      }).join('');
+  }
+  function togglePickerRow(id) {
+    if(pickerSel.has(id)) pickerSel.delete(id); else pickerSel.add(id);
+    renderPickerList();
+  }
+  function togglePickerCheck(id, cb) {
+    if(cb.checked) pickerSel.add(id); else pickerSel.delete(id);
+    const row=cb.closest('.pk-row');
+    if(row) row.classList.toggle('sel',cb.checked);
+    const added=pickerTarget==='content'?data.mainPage.contentSpotIds:data.mainPage.listItemIds;
+    const cnt=[...pickerSel].filter(i=>!added.includes(i)).length;
+    const btn=document.getElementById('pk-add-btn'); btn.disabled=cnt===0;
+    document.getElementById('pk-sel-cnt').textContent=cnt;
+  }
+  function onPickerSearch(val) { pickerSearch=val; renderPickerList(); }
+  function bulkAddToSlot() {
+    const arr=pickerTarget==='content'?data.mainPage.contentSpotIds:data.mainPage.listItemIds;
+    pickerSel.forEach(id=>{ if(!arr.includes(id)) arr.push(id); });
+    pickerSel=new Set(); renderPickerList(); renderCurSec(pickerTarget);
+  }
+  function closePicker() { document.getElementById('picker-ov').classList.remove('open'); }
+  document.getElementById('picker-ov').addEventListener('click',e=>{
+    if(e.target===document.getElementById('picker-ov')) closePicker();
+  });
+
+  /* ═══════════════════ BACKUP / RESTORE ═══════════════════ */
+  let _pendingRestoreZip  = null;   // JSZip instance 대기 중
+  let _pendingRestoreData = null;   // 파싱된 backup JSON 대기 중
+
+  function fmtBytes(bytes) {
+    if (bytes < 1024)        return bytes + ' B';
+    if (bytes < 1024*1024)   return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  // 백업 패널 진입 시 호출
+  function refreshBackupSummary() {
+    const incImg   = document.getElementById('backup-img-toggle').checked;
+    const track    = document.getElementById('backup-toggle-track');
+    const thumb    = document.getElementById('backup-toggle-thumb');
+    const descEl   = document.getElementById('backup-img-desc');
+    const sumEl    = document.getElementById('backup-summary');
+    const labelEl  = document.getElementById('backup-dl-label');
+
+    // 토글 시각
+    track.style.background = incImg ? 'rgba(22,163,74,0.7)' : 'rgba(0,0,0,0.15)';
+    thumb.style.transform  = incImg ? 'translateX(18px)' : 'translateX(0)';
+
+    const spots     = data.spots || [];
+    const spotCount = spots.length;
+    let   imgCount  = 0, rawImgBytes = 0;
+    for (const s of spots) {
+      for (const img of (s.images||[])) {
+        if (!img.dataUrl) continue;
+        imgCount++;
+        const m = img.dataUrl.match(/^data:[^;]+;base64,(.+)$/);
+        if (m) rawImgBytes += Math.round(m[1].length * 0.75);
+      }
+    }
+
+    const jsonBytes = new Blob([JSON.stringify(data)]).size;
+
+    if (incImg) {
+      descEl.textContent  = '이미지를 images/ 폴더에 포함합니다 (.zip)';
+      labelEl.textContent = 'ZIP으로 백업 내려받기';
+      sumEl.innerHTML =
+        `스팟 <strong style="color:rgba(0,0,0,0.72);">${spotCount}개</strong> &nbsp;·&nbsp; `+
+        `이미지 <strong style="color:rgba(0,0,0,0.72);">${imgCount}개</strong> &nbsp;·&nbsp; `+
+        `예상 용량 <strong style="color:rgba(0,0,0,0.72);">~${fmtBytes(jsonBytes + rawImgBytes)}</strong>`;
+    } else {
+      descEl.textContent  = '이미지 제외, 텍스트 데이터만 저장합니다 (.json)';
+      labelEl.textContent = 'JSON으로 백업 내려받기';
+      sumEl.innerHTML =
+        `스팟 <strong style="color:rgba(0,0,0,0.72);">${spotCount}개</strong> &nbsp;·&nbsp; `+
+        `이미지 미포함 &nbsp;·&nbsp; `+
+        `예상 용량 <strong style="color:rgba(0,0,0,0.72);">~${fmtBytes(jsonBytes)}</strong>`;
+    }
+  }
+
+  async function exportBackup(evt) {
+    if (typeof JSZip === 'undefined') { alert('JSZip 라이브러리를 불러오는 중입니다. 잠시 후 다시 시도해주세요.'); return; }
+    const btn     = evt.currentTarget;
+    const origHTML= btn.innerHTML;
+    const incImg  = document.getElementById('backup-img-toggle').checked;
+    btn.disabled  = true;
+    document.getElementById('backup-dl-label').textContent = '생성 중...';
+    try {
+      const backup = JSON.parse(JSON.stringify(data));
+      backup._version    = 1;
+      backup._exportedAt = new Date().toISOString();
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (incImg) {
+        // ── ZIP + 이미지 ──────────────────────────────
+        const zip       = new JSZip();
+        const imgFolder = zip.folder('images');
+        for (const spot of (backup.spots||[])) {
+          for (const img of (spot.images||[])) {
+            if (!img.dataUrl) continue;
+            const m = img.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+            if (!m) continue;
+            const ext  = m[1].split('/')[1] || 'jpg';
+            const name = img.id + '.' + ext;
+            imgFolder.file(name, m[2], { base64: true });
+            img.path = 'images/' + name;
+            delete img.dataUrl;
+          }
+        }
+        zip.file('data.json', JSON.stringify(backup, null, 2));
+        const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{level:6} });
+        _triggerDownload(blob, 'nightdrive_backup_' + today + '.zip');
+        toast('ZIP 백업 파일이 다운로드됩니다.');
+      } else {
+        // ── JSON만 (이미지 제거) ──────────────────────
+        for (const spot of (backup.spots||[])) {
+          spot.images          = [];
+          spot.thumbnailImageId = null;
+        }
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
+        _triggerDownload(blob, 'nightdrive_backup_' + today + '.json');
+        toast('JSON 백업 파일이 다운로드됩니다.');
+      }
+    } catch(e) {
+      alert('백업 실패: ' + e.message);
+    } finally {
+      btn.disabled  = false;
+      btn.innerHTML = origHTML;
+    }
+  }
+
+  function _triggerDownload(blob, filename) {
+    const a = document.createElement('a');
+    a.href  = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  // ── 복원 미리보기 ──────────────────────────────────────────
+  async function previewRestore(file) {
+    if (!file) return;
+    if (typeof JSZip === 'undefined') { alert('JSZip 라이브러리를 불러오는 중입니다. 잠시 후 다시 시도해주세요.'); return; }
+    try {
+      const zip     = await JSZip.loadAsync(file);
+      const jsonFile= zip.file('data.json');
+      if (!jsonFile) throw new Error('data.json을 찾을 수 없습니다. 올바른 백업 파일인지 확인하세요.');
+      const backup  = JSON.parse(await jsonFile.async('string'));
+
+      _pendingRestoreZip  = zip;
+      _pendingRestoreData = backup;
+
+      // 통계 계산
+      const spots     = backup.spots || [];
+      const spotCount = spots.length;
+      let imgCount = 0;
+      for (const s of spots) {
+        imgCount += (s.images||[]).filter(i => i.path || i.dataUrl).length;
+      }
+      const exportedAt = backup._exportedAt
+        ? new Date(backup._exportedAt).toLocaleString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+        : '알 수 없음';
+      const fileSz  = fmtBytes(file.size);
+      const brand   = backup.brandName || '(없음)';
+      const filters = (backup.filters && backup.filters.regions || []).map(r => r.label).join(', ') || '없음';
+
+      // 스팟 목록 HTML
+      const spotRows = spots.map(s => {
+        const ic = (s.images||[]).filter(i => i.path || i.dataUrl).length;
+        return `<div style="display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+          <span style="font-size:12.5px;color:rgba(0,0,0,0.68);flex:1;margin-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${h(s.title||s.location||'(제목 없음)')}</span>
+          <span style="font-size:11px;color:rgba(0,0,0,0.36);flex-shrink:0;">이미지 ${ic}개</span>
+        </div>`;
+      }).join('');
+
+      document.getElementById('restore-preview-content').innerHTML = `
+        <div style="background:#f8f9fa;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:14px 16px;margin-bottom:4px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px;">
+            <div>
+              <p style="font-size:10.5px;color:rgba(0,0,0,0.36);margin-bottom:2px;">브랜드명</p>
+              <p style="font-size:13px;color:rgba(0,0,0,0.80);font-weight:600;">${h(brand)}</p>
+            </div>
+            <div>
+              <p style="font-size:10.5px;color:rgba(0,0,0,0.36);margin-bottom:2px;">백업 일시</p>
+              <p style="font-size:13px;color:rgba(0,0,0,0.80);font-weight:600;">${exportedAt}</p>
+            </div>
+            <div>
+              <p style="font-size:10.5px;color:rgba(0,0,0,0.36);margin-bottom:2px;">파일 크기</p>
+              <p style="font-size:13px;color:rgba(0,0,0,0.80);font-weight:600;">${fileSz}</p>
+            </div>
+            <div>
+              <p style="font-size:10.5px;color:rgba(0,0,0,0.36);margin-bottom:2px;">출발지 필터</p>
+              <p style="font-size:13px;color:rgba(0,0,0,0.80);font-weight:600;">${h(filters)}</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;padding:10px 0;border-top:1px solid rgba(0,0,0,0.07);border-bottom:1px solid rgba(0,0,0,0.07);margin-bottom:12px;">
+            <div style="text-align:center;flex:1;">
+              <p style="font-size:22px;font-weight:800;color:rgba(0,0,0,0.82);">${spotCount}</p>
+              <p style="font-size:11px;color:rgba(0,0,0,0.36);">스팟</p>
+            </div>
+            <div style="text-align:center;flex:1;">
+              <p style="font-size:22px;font-weight:800;color:rgba(0,0,0,0.82);">${imgCount}</p>
+              <p style="font-size:11px;color:rgba(0,0,0,0.36);">이미지</p>
+            </div>
+          </div>
+          <div style="max-height:220px;overflow-y:auto;">${spotRows || '<p style="font-size:12px;color:rgba(0,0,0,0.32);padding:8px 0;">스팟 없음</p>'}</div>
+        </div>
+        <p style="font-size:11.5px;color:rgba(185,28,28,0.80);margin-top:10px;line-height:1.6;">
+          ⚠ 복원하면 현재 데이터 전체가 덮어씌워집니다.
+        </p>`;
+
+      document.getElementById('restore-upload-area').style.display  = 'none';
+      document.getElementById('restore-preview-area').style.display = 'block';
+    } catch(e) {
+      alert('파일 읽기 실패: ' + e.message);
+      cancelRestore();
+    }
+  }
+
+  function cancelRestore() {
+    _pendingRestoreZip  = null;
+    _pendingRestoreData = null;
+    document.getElementById('restore-upload-area').style.display  = 'block';
+    document.getElementById('restore-preview-area').style.display = 'none';
+  }
+
+  async function confirmRestore() {
+    if (!_pendingRestoreData || !_pendingRestoreZip) return;
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.textContent = '복원 중...';
+    try {
+      const backup = _pendingRestoreData;
+      const zip    = _pendingRestoreZip;
+
+      // 이미지 상대경로 → base64 dataUrl
+      for (const spot of (backup.spots||[])) {
+        for (const img of (spot.images||[])) {
+          if (!img.path) continue;
+          const imgFile = zip.file(img.path);
+          if (!imgFile) continue;
+          const b64  = await imgFile.async('base64');
+          const ext  = img.path.split('.').pop().toLowerCase();
+          const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+          img.dataUrl = 'data:' + mime + ';base64,' + b64;
+          delete img.path;
+        }
+      }
+
+      delete backup._version;
+      delete backup._exportedAt;
+
+      const restored = migrate(backup);
+      await SB.set(restored);
+      localStorage.setItem(PUB_KEY,   JSON.stringify(restored));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(restored));
+      toast('복원 완료! 페이지를 새로고침합니다...');
+      setTimeout(() => location.reload(), 1400);
+    } catch(e) {
+      alert('복원 실패: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '이 내용으로 복원하기';
+    }
+  }
+
+  /* ═══════════════════ INIT ═══════════════════ */
+  (async () => {
+    data = await loadData();
+    document.getElementById('draft-text').textContent = '임시저장 후 발행하기가 활성화됩니다';
+    renderLib();
+  })();
+  </script>
+
+  <!-- ══════ BULK DELETE MODAL ══════ -->
+  <div id="bulk-del-modal">
+    <div class="modal-box">
+      <p class="modal-title">스팟 일괄 삭제</p>
+      <p class="modal-desc">선택한 <strong id="modal-del-cnt">0</strong>개의 스팟을 삭제하려면<br><strong>삭제</strong>를 정확히 입력하고 확인을 누르세요.</p>
+      <input type="text" id="del-confirm-input" placeholder="삭제" oninput="onDelInput()" autocomplete="off">
+      <p class="modal-err" id="del-err"></p>
+      <div class="modal-actions">
+        <button class="btn btn-g btn-sm" onclick="closeBulkDelModal()">취소</button>
+        <button class="btn btn-d btn-sm" onclick="executeBulkDelete()">확인</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

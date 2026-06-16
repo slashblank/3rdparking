@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import Quartz; print\\('pyobjc/Quartz OK'\\)\")",
+      "Bash(python3 -c \"import WebKit; print\\('WebKit OK'\\)\")",
+      "Bash(python3 -m pip --version)",
+      "Bash(python3 -c \"import cairosvg; print\\('cairosvg OK'\\)\")",
+      "Bash(cp out/_test.html.png out/_crop.png)",
+      "Bash(sips -c 1350 1080 out/_crop.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight out/_crop.png)",
+      "Bash(qlmanage -t -s 1350 -o out card1.html)",
+      "Bash(sips -g pixelWidth -g pixelHeight out/card1_raw.png)",
+      "Bash(qlmanage -t -s 1350 -o out _ruler.html)",
+      "Bash(sips -g pixelWidth -g pixelHeight out/_ruler.png)",
+      "Bash(qlmanage -t -s 1080 -o out _b.html)",
+      "Bash(sips -g pixelHeight out/_b.png)",
+      "Bash(qlmanage -t -s 1350 -o out card1_45.html)",
+      "Bash(sips -g pixelWidth -g pixelHeight out/test45.png)",
+      "Bash(awk '{print $2}')",
+      "Bash(sips -c 1350 1080 out/test45.png)",
+      "Bash(qlmanage -t -s 1350 -o out _r45.html)",
+      "Bash(sips -c 1350 1080 out/_r45.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight out/_r45.png)",
+      "Bash(qlmanage -t -s 2048 -o out card1_45.html)",
+      "Bash(sips -c 2048 1638 out/t1.png)",
+      "Bash(sips -z 1350 1080 out/t1.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight out/t1.png)",
+      "Bash(open /Users/admin/Documents/claude_space/index.html)",
+      "Bash(open /Users/admin/Documents/claude_space/admin.html)",
+      "Bash(screencapture -x /tmp/admin_preview.png)",
+      "Bash(osascript -e 'tell application \"Google Chrome\" to activate' -e 'tell application \"System Events\" to keystroke \"l\" using command down')",
+      "Bash(osascript -e 'tell application \"System Events\" to keystroke \"file:///Users/admin/Documents/claude_space/admin.html\"' -e 'tell application \"System Events\" to key code 36')",
+      "Bash(screencapture -x /tmp/admin_preview2.png)",
+      "Bash(osascript -e 'tell application \"Google Chrome\" *)",
+      "Bash(screencapture -x /tmp/admin_final.png)",
+      "Bash(osascript -e 'tell application \"Safari\" *)",
+      "Bash(screencapture -x /tmp/admin_safari.png)",
+      "Bash(node --input-type=module)"
+    ]
+  }
+}

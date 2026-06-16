@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-title">스팟 아카이브 · 심야 드라이브</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;scrollbar-gutter:stable;}
+    body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;overflow-x:hidden;}
+
+    /* ── Presets (same as index) ── */
+    .spot-preset-1{background:radial-gradient(ellipse at 65% 25%,#2d1b4e 0%,#090912 55%),linear-gradient(175deg,#0a0818 0%,#1a0f30 55%,#060609 100%);}
+    .spot-preset-2{background:radial-gradient(ellipse at 30% 60%,#0a2d40 0%,#030d15 55%),linear-gradient(175deg,#030d12 0%,#0d2535 55%,#030a10 100%);}
+    .spot-preset-3{background:radial-gradient(ellipse at 70% 40%,#1a2d0a 0%,#0a0d03 55%),linear-gradient(175deg,#050810 0%,#151f0a 55%,#050808 100%);}
+    .spot-preset-4{background:radial-gradient(ellipse at 45% 30%,#1a0a30 0%,#090912 55%),linear-gradient(175deg,#060609 0%,#120a28 55%,#050508 100%);}
+    .spot-preset-5{background:radial-gradient(ellipse at 55% 50%,#2d1a0a 0%,#0d0905 55%),linear-gradient(175deg,#0a0503 0%,#1e1005 55%,#090502 100%);}
+
+    /* ── Container / page-title / page-sub → ui.js 공통 스타일 사용 ── */
+
+    /* ── Chip filter (same as index hero chips) ── */
+    .chips-wrap{margin-bottom:22px;}
+    .glass-chip{
+      display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:50px;
+      background:rgba(255,255,255,0.05);-webkit-backdrop-filter:blur(8px) saturate(135%) brightness(0.9);backdrop-filter:blur(8px) saturate(135%) brightness(0.9);
+      border:1px solid rgba(255,255,255,0.09);cursor:pointer;
+      color:rgba(255,255,255,0.70);
+      transition:background .25s,border-color .25s,transform .15s;
+    }
+    .glass-chip:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.15);}
+    .glass-chip:active{transform:scale(.97);}
+    .glass-chip.active{background:rgba(74,222,128,0.12);border-color:rgba(74,222,128,0.30);}
+    .glass-chip.active span{color:rgba(134,239,172,0.95);}
+    .glass-chip.active svg{color:rgba(134,239,172,0.95);}
+    .glass-chip span{font-size:14px;font-weight:600;color:inherit;transition:color .22s;}
+    .glass-chip svg{flex-shrink:0;color:inherit;}
+
+    /* ── List items (pixel-exact match of index.html list section) ── */
+    .list-divider{height:1px;background:rgba(255,255,255,0.07);margin-bottom:0;}
+    .list-item{
+      display:flex;align-items:center;gap:16px;
+      padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.07);
+      cursor:pointer;transition:opacity .18s;
+    }
+    .list-item:active{opacity:.65;}
+    .list-item.hidden-mood{display:none;}
+    .list-thumb{width:68px;height:68px;border-radius:16px;flex-shrink:0;}
+    .list-body{flex:1;min-width:0;}
+    .list-title{font-size:15px;font-weight:700;color:rgba(255,255,255,0.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;line-height:1.3;}
+    .list-loc{font-size:12px;font-weight:500;color:rgba(255,255,255,0.32);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+    .list-tags{font-size:11.5px;font-weight:500;color:rgba(255,255,255,0.20);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .list-chevron{width:18px;height:18px;flex-shrink:0;}
+
+    /* ── Departure filter — title breadcrumb + dropdown ── */
+    .filter-section-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:rgba(255,255,255,0.28);margin-bottom:10px;display:block;}
+    .title-filter-trigger{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;-webkit-user-select:none;user-select:none;}
+    .title-sep{color:rgba(255,255,255,0.22);font-weight:400;}
+    #title-region-label{color:rgba(255,255,255,0.70);font-weight:700;}
+    .region-dropdown{
+      position:absolute;top:calc(100% + 4px);left:0;min-width:190px;
+      border-radius:18px;padding:6px;z-index:100;
+      opacity:0;transform:translateY(-6px) scale(.97);pointer-events:none;
+      transition:opacity .18s ease,transform .18s ease;
+      background:rgba(255,255,255,0.04);
+      -webkit-backdrop-filter:blur(10px) saturate(135%) brightness(0.9);
+      backdrop-filter:blur(10px) saturate(135%) brightness(0.9);
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:0 30px 64px rgba(0,0,0,0.30);
+    }
+    .region-dropdown.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+    .region-dropdown-item{
+      display:flex;align-items:center;width:100%;padding:12px 16px;
+      border-radius:12px;border:none;background:none;cursor:pointer;
+      color:rgba(255,255,255,0.60);font-size:14px;font-weight:600;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      text-align:left;transition:background .15s,color .15s;
+      -webkit-appearance:none;appearance:none;
+    }
+    .region-dropdown-item:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.88);}
+    .region-dropdown-item.active{color:rgba(165,180,252,0.95);}
+    .region-dropdown-item.item-clear{color:rgba(255,255,255,0.30);font-size:13px;font-weight:500;}
+    .region-dropdown-item.item-clear:hover{color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.04);}
+
+    /* ── Search bar ── */
+    .search-wrap{position:relative;margin-bottom:18px;}
+    .search-input{
+      width:100%;padding:11px 40px 11px 42px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.06);
+      -webkit-backdrop-filter:blur(8px) saturate(135%) brightness(0.9);
+      backdrop-filter:blur(8px) saturate(135%) brightness(0.9);
+      border:1px solid rgba(255,255,255,0.09);
+      color:#fff;font-size:15px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      outline:none;
+      -webkit-appearance:none;appearance:none;
+      box-sizing:border-box;
+      transition:background .2s,border-color .2s;
+    }
+    .search-input::placeholder{color:rgba(255,255,255,0.25);}
+    .search-input:focus{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.18);}
+    .search-ico{
+      position:absolute;left:14px;top:50%;transform:translateY(-50%);
+      pointer-events:none;color:rgba(255,255,255,0.35);
+    }
+    .search-clear{
+      position:absolute;right:10px;top:50%;transform:translateY(-50%);
+      width:24px;height:24px;border-radius:50%;
+      display:none;align-items:center;justify-content:center;
+      background:rgba(255,255,255,0.10);border:none;cursor:pointer;
+      color:rgba(255,255,255,0.55);padding:0;
+      -webkit-appearance:none;appearance:none;
+      transition:background .18s;
+    }
+    .search-clear:hover{background:rgba(255,255,255,0.18);}
+    .search-clear.visible{display:flex;}
+
+    /* ── Empty state ── */
+    .empty{padding:48px 0;text-align:center;}
+    .empty p{font-size:14px;color:rgba(255,255,255,0.28);font-weight:500;line-height:1.7;}
+
+  </style>
+</head>
+<body>
+
+  <!-- Main content -->
+  <div class="ui-container">
+    <div class="page-head">
+      <div class="title-departure-wrap" id="title-departure-wrap">
+        <h1 class="page-title">
+          <span id="title-main-text">아카이브</span>
+          <span class="title-filter-trigger" onclick="toggleRegionDropdown()">
+            <span class="title-sep">›</span>
+            <span id="title-region-label">출발지 전체</span>
+            <div class="region-dropdown" id="region-dropdown" onclick="event.stopPropagation()"></div>
+          </span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-wrap">
+      <svg class="search-ico" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input class="search-input" id="search-input" type="text"
+        placeholder="스팟 이름, 지역, 태그 검색..."
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        oninput="onSearch(this.value)">
+      <button class="search-clear" id="search-clear" type="button" onclick="clearSearch()" aria-label="검색어 지우기">
+        <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mood chip filter -->
+    <div class="chips-wrap">
+      <span class="filter-section-label">무드</span>
+      <div style="display:flex;flex-wrap:wrap;gap:9px;" id="chip-filter"></div>
+    </div>
+
+    <!-- Spot list -->
+    <div class="list-divider"></div>
+    <div id="spot-list"></div>
+
+    <!-- No results -->
+    <div id="no-results" style="display:none;" class="empty">
+      <p>해당 무드의 스팟이 없습니다.</p>
+    </div>
+  </div>
+
+  <script src="ui.js"></script>
+  <script>
+  const params   = new URLSearchParams(location.search);
+  const IS_PREV  = params.get('preview') === 'draft';
+  const STOR_KEY = IS_PREV ? 'nightDriveConfig_draft' : 'nightDriveConfig';
+
+  const SB=(()=>{
+    const U='https://hqedpgvyxaohywilkhyq.supabase.co';
+    const K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZWRwZ3Z5eGFvaHl3aWxraHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NjUxMzIsImV4cCI6MjA5NzE0MTEzMn0.xS5cLymVZSSAjw1o_JJJ0Vd-hfofaYFGU9AeT7VR_6M';
+    const H={apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'};
+    return {
+      async get(){const r=await fetch(U+'/rest/v1/config?id=eq.1&select=data',{headers:H});if(!r.ok)throw new Error(r.status);const rows=await r.json();return rows[0]?.data||null;},
+      async set(d){const r=await fetch(U+'/rest/v1/config',{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id:1,data:d})});if(!r.ok)throw new Error(r.status);}
+    };
+  })();
+
+  const DEFAULT_DATA = {
+    brandName:"심야 드라이브",
+    hero:{heading:"어떤 무드가 필요한가요?",scrollHint:"",chips:[
+      {id:"c1",icon:"laptop",label:"나혼자 작업"},
+      {id:"c2",icon:"headphones",label:"멍때리기"},
+      {id:"c3",icon:"book",label:"미술전시"},
+      {id:"c4",icon:"chat",label:"수다"}
+    ]},
+    spots:[
+      {id:"sp1",title:"헤드폰 볼륨을 높여도 눈치 보이지 않는 곳",thumbTitle1:"헤드폰 볼륨을 높여도",thumbTitle2:"눈치 보이지 않는 곳",tags:"#노트북작업 #새벽3시마감 #주차여유",moodChipIds:["c1"],location:"경기 남양주 OOO카페",description:"",bgPreset:"1",bgColor:"#1a2e4a",images:[],thumbnailImageId:null},
+      {id:"sp2",title:"가로등 없는 굽은 길 끝, 차 안에서 즐기는 물멍",thumbTitle1:"가로등 없는 굽은 길 끝,",thumbTitle2:"차 안에서 즐기는 물멍",tags:"#가만히물멍 #24시간개방 #야외주차장",moodChipIds:["c2"],location:"경기 양평 OOO공원",description:"",bgPreset:"2",bgColor:"#0d2535",images:[],thumbnailImageId:null},
+      {id:"sp3",title:"새벽의 죽도해변, 파도 소리만 들리는 곳",thumbTitle1:"파도 소리만 들리는",thumbTitle2:"새벽의 죽도해변",tags:"#밤바다 #파도소리 #24시간",moodChipIds:["c2"],location:"강원 양양 · 죽도해변",description:"",bgPreset:"3",bgColor:"#1a3a5c",images:[],thumbnailImageId:null},
+      {id:"sp4",title:"구름 위 호수에서 혼자만의 물멍",thumbTitle1:"구름 위 호수에서",thumbTitle2:"혼자만의 물멍",tags:"#물멍 #산정상 #야간개방",moodChipIds:["c2"],location:"경기 가평 · 호명호수",description:"",bgPreset:"4",bgColor:"#1e4d4d",images:[],thumbnailImageId:null},
+      {id:"sp5",title:"인천 끝자락에서 만나는 황금빛 을왕리 노을",thumbTitle1:"인천 끝자락에서 만나는",thumbTitle2:"황금빛 을왕리 노을",tags:"#노을맛집 #드라이브 #포차",moodChipIds:["c2"],location:"인천 · 을왕리 해변",description:"",bgPreset:"1",bgColor:"#3d1a5c",images:[],thumbnailImageId:null},
+      {id:"sp6",title:"도시 불빛이 내려다보이는 하늘 위의 억새밭",thumbTitle1:"도시 불빛이 내려다보이는",thumbTitle2:"하늘 위의 억새밭",tags:"#야경 #억새 #산책",moodChipIds:["c2","c3"],location:"서울 · 하늘공원",description:"",bgPreset:"5",bgColor:"#0f2d1a",images:[],thumbnailImageId:null},
+      {id:"sp7",title:"파도 소리와 커피 향이 섞이는 강릉 안목해변의 밤",thumbTitle1:"파도 소리와 커피 향이 섞이는",thumbTitle2:"강릉 안목해변의 밤",tags:"#커피거리 #밤바다 #카페",moodChipIds:["c1","c4"],location:"강원 강릉 · 안목해변",description:"",bgPreset:"2",bgColor:"#1a0f2d",images:[],thumbnailImageId:null},
+      {id:"sp8",title:"새벽 물안개 속에서 혼자만의 고요한 시간",thumbTitle1:"새벽 물안개 속에서",thumbTitle2:"혼자만의 고요한 시간",tags:"#물안개 #고요 #일출",moodChipIds:["c2"],location:"경기 양평 · 두물머리",description:"",bgPreset:"3",bgColor:"#0d1f3c",images:[],thumbnailImageId:null},
+      {id:"sp9",title:"분수쇼가 물드는 다대포의 황혼",thumbTitle1:"분수쇼가 물드는",thumbTitle2:"다대포의 황혼",tags:"#낙조 #분수쇼 #드라이브",moodChipIds:["c2"],location:"부산 · 다대포해변",description:"",bgPreset:"4",bgColor:"#2d1a0f",images:[],thumbnailImageId:null},
+      {id:"sp10",title:"할미바위 너머로 지는 꽃지해변 황금빛 일몰",thumbTitle1:"할미바위 너머로 지는",thumbTitle2:"꽃지해변 황금빛 일몰",tags:"#일몰 #갯벌 #캠핑",moodChipIds:["c2"],location:"충남 태안 · 꽃지해변",description:"",bgPreset:"5",bgColor:"#1a2d0f",images:[],thumbnailImageId:null},
+      {id:"sp11",title:"불 꺼진 예술마을을 혼자 걷는 늦은 밤",thumbTitle1:"불 꺼진 예술마을을",thumbTitle2:"혼자 걷는 늦은 밤",tags:"#심야카페 #예술마을 #산책",moodChipIds:["c1","c3"],location:"경기 파주 · 헤이리",description:"",bgPreset:"1",bgColor:"#2d0f1a",images:[],thumbnailImageId:null}
+    ],
+    mainPage:{contentSpotIds:["sp1","sp2"],listTitle:"이런 곳은 어때요?",listItemIds:["sp3","sp4","sp5","sp6","sp7","sp8","sp9","sp10","sp11"]}
+  };
+
+  const ICONS = {
+    laptop:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`,
+    headphones:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 18v-6a9 9 0 0118 0v6M3 18a3 3 0 013-3h1a2 2 0 012 2v2a2 2 0 01-2 2H6a3 3 0 01-3-3zM21 18a3 3 0 00-3-3h-1a2 2 0 00-2 2v2a2 2 0 002 2h1a3 3 0 003-3z"/></svg>`,
+    book:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>`,
+    chat:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`,
+    car:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0zM5 9l2-5h10l2 5m-14 0h14l1 3H4L5 9z"/></svg>`,
+    music:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>`,
+    coffee:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>`,
+    star:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`,
+    moon:`<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>`,
+  };
+  // Fallback for icons not in the map above
+  const ICON_FB = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`;
+
+  function h(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function loadData(){
+    try{const s=localStorage.getItem(STOR_KEY);if(s){const d=JSON.parse(s);if(d.spots&&d.mainPage)return migrate(d);}}catch(e){}
+    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+  function migrate(d){
+    d.hero=d.hero||{};
+    if(!d.hero.headingMode) d.hero.headingMode='fixed';
+    if(!d.hero.headingTimed) d.hero.headingTimed={defaults:[d.hero.heading||''],slots:[]};
+    (d.hero.chips||[]).forEach(c=>{if(c.visible===undefined)c.visible=true;});
+    d.spots=(d.spots||[]).map(s=>({...s,
+      title:s.title||s.adminTitle||s.location||'',
+      thumbTitle1:s.thumbTitle1||s.headline1||'',
+      thumbTitle2:s.thumbTitle2||s.headline2||'',
+      moodChipIds:s.moodChipIds||[],
+      description:s.description||'',
+      images:s.images||(s.imageUrl?[{id:'leg_'+s.id,dataUrl:s.imageUrl,name:'image'}]:[]),
+      thumbnailImageId:s.thumbnailImageId||(s.imageUrl?'leg_'+s.id:null),
+      published:s.published!==undefined?s.published:true,
+    }));
+    return d;
+  }
+  function getThumb(spot){
+    if(spot.images&&spot.images.length>0){
+      const i=spot.images.find(x=>x.id===spot.thumbnailImageId)||spot.images[0];
+      return i?i.dataUrl:'';
+    }
+    return '';
+  }
+
+  /* ── 출발지 필터 (admin data에서 동적 로드) ── */
+  let loadedRegions = [];
+
+  /* URL 파라미터로 초기 상태 복원 */
+  let activeRegion = params.get('region') || null;
+  let activeChip   = params.get('mood')   || null;
+  let searchQuery  = params.get('q')      || '';
+
+  function renderPage(){
+    const data = loadData();
+    document.getElementById('brand-name').textContent = data.brandName || '심야 드라이브';
+    document.getElementById('page-title').textContent = '아카이브 · ' + (data.brandName || '심야 드라이브');
+    loadedRegions = (data.filters && data.filters.regions) || [];
+
+    /* 검색창 초기값 복원 */
+    const inp = document.getElementById('search-input');
+    if (inp && searchQuery) {
+      inp.value = searchQuery;
+      document.getElementById('search-clear').classList.add('visible');
+    }
+
+    renderRegionDropdown();
+    renderChips(data);
+    renderList(data);
+
+    /* ?search=1 → 검색창 자동 포커스 후 파라미터 제거 */
+    if (params.get('search') === '1') {
+      requestAnimationFrame(() => {
+        const i = document.getElementById('search-input');
+        if (i) i.focus();
+        const np = new URLSearchParams(location.search);
+        np.delete('search');
+        const qs = np.toString();
+        history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+      });
+    }
+  }
+
+  function renderRegionDropdown(){
+    const dd = document.getElementById('region-dropdown'); if(!dd) return;
+    dd.innerHTML = `<button class="region-dropdown-item item-clear" data-region-id="" onclick="selectRegion(null)" type="button">출발지 전체</button>`
+      + loadedRegions.map(r =>
+          `<button class="region-dropdown-item" data-region-id="${h(r.id)}" onclick="selectRegion('${h(r.id)}')" type="button">${h(r.label)} 출발</button>`
+        ).join('');
+    updateRegionTitle();
+  }
+
+  function updateRegionTitle(){
+    const regLabel = document.getElementById('title-region-label');
+    if(regLabel){
+      if(activeRegion){
+        const r = loadedRegions.find(r => r.id === activeRegion);
+        regLabel.textContent = (r ? r.label : activeRegion) + ' 출발';
+      } else {
+        regLabel.textContent = '출발지 전체';
+      }
+    }
+    document.querySelectorAll('.region-dropdown-item').forEach(btn=>{
+      const rid = btn.dataset.regionId || null;
+      btn.classList.toggle('active', rid === activeRegion);
+    });
+  }
+
+  function toggleRegionDropdown(){
+    const wrap = document.getElementById('title-departure-wrap');
+    const dd   = document.getElementById('region-dropdown');
+    if(!wrap || !dd) return;
+    if(wrap.classList.contains('dropdown-open')){ closeRegionDropdown(); }
+    else { wrap.classList.add('dropdown-open'); dd.classList.add('open'); }
+  }
+
+  function closeRegionDropdown(){
+    const wrap = document.getElementById('title-departure-wrap');
+    const dd   = document.getElementById('region-dropdown');
+    if(wrap) wrap.classList.remove('dropdown-open');
+    if(dd)   dd.classList.remove('open');
+  }
+
+  function selectRegion(id){
+    activeRegion = id;
+    closeRegionDropdown();
+    updateRegionTitle();
+    syncURL();
+    applyFilter();
+  }
+
+  function renderChips(data){
+    const chips = (data.hero.chips||[]).filter(c=>c.visible!==false);
+    const el = document.getElementById('chip-filter');
+    el.innerHTML = chips.map(c => `
+      <button class="glass-chip${activeChip===c.id?' active':''}"
+        data-chip-id="${h(c.id)}"
+        onclick="toggleChip('${h(c.id)}')"
+        type="button">
+        ${ICONS[c.icon]||ICON_FB}
+        <span>${h(c.label)}</span>
+      </button>`).join('');
+  }
+
+  function renderList(data){
+    const el = document.getElementById('spot-list');
+    const spots = (data.spots||[]).filter(s=>s.published!==false);
+
+    if (!spots.length) {
+      el.innerHTML = '';
+      document.getElementById('no-results').style.display = 'block';
+      return;
+    }
+
+    el.innerHTML = spots.map(spot => {
+      const thumbUrl  = getThumb(spot);
+      const presetCls = thumbUrl ? '' : `spot-preset-${spot.bgPreset||'1'}`;
+      const thumbBg   = thumbUrl ? `background:url('${h(thumbUrl)}') center/cover no-repeat` : `background-color:${h(spot.bgColor||'#1a2e4a')}`;
+      const moodIds   = JSON.stringify(spot.moodChipIds||[]).replace(/"/g,'&quot;');
+      const regionIds = JSON.stringify(spot.regionIds||[]).replace(/"/g,'&quot;');
+      const searchTxt = [spot.title,spot.location,spot.tags,spot.description||''].join(' ').replace(/"/g,'&quot;');
+      return `
+        <div class="list-item"
+          data-spot-id="${h(spot.id)}"
+          data-mood-ids="${moodIds}"
+          data-region-ids="${regionIds}"
+          data-search-text="${searchTxt}"
+          onclick="goToSpot('${h(spot.id)}')">
+          <div class="list-thumb ${presetCls}" style="${thumbBg};"></div>
+          <div class="list-body">
+            <p class="list-title">${h(spot.title||spot.location||'')}</p>
+            <p class="list-loc">${h(spot.location)}</p>
+            <p class="list-tags">${h(spot.tags)}</p>
+          </div>
+          <svg class="list-chevron" fill="none" stroke="rgba(255,255,255,0.22)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </div>`;
+    }).join('');
+
+    applyFilter();
+  }
+
+  function toggleChip(id){
+    /* 단일 선택: 같은 칩 재클릭 → 해제, 다른 칩 클릭 → 교체 */
+    activeChip = (activeChip === id) ? null : id;
+    syncURL();
+    document.querySelectorAll('.glass-chip').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.chipId === activeChip);
+    });
+    applyFilter();
+  }
+
+  function onSearch(value){
+    searchQuery = value.trim();
+    document.getElementById('search-clear').classList.toggle('visible', !!searchQuery);
+    syncURL();
+    applyFilter();
+  }
+
+  function clearSearch(){
+    searchQuery = '';
+    const inp = document.getElementById('search-input');
+    if(inp) inp.value = '';
+    document.getElementById('search-clear').classList.remove('visible');
+    syncURL();
+    applyFilter();
+  }
+
+  function syncURL(){
+    const np = new URLSearchParams(location.search);
+    if(activeRegion) np.set('region', activeRegion); else np.delete('region');
+    if(activeChip)   np.set('mood',   activeChip);   else np.delete('mood');
+    if(searchQuery)  np.set('q',      searchQuery);  else np.delete('q');
+    np.delete('search');
+    const qs = np.toString();
+    history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+  }
+
+  function applyFilter(){
+    const q = searchQuery.toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.list-item').forEach(item=>{
+      let show = true;
+
+      /* 출발지 필터 */
+      if(activeRegion){
+        try{
+          const rids=JSON.parse(item.dataset.regionIds||'[]');
+          if(!rids.includes(activeRegion)) show=false;
+        }catch(e){ show=false; }
+      }
+
+      /* 무드 필터 */
+      if(show && activeChip){
+        try{
+          const moods = JSON.parse(item.dataset.moodIds||'[]');
+          if(!moods.includes(activeChip)) show = false;
+        }catch(e){}
+      }
+
+      /* 검색 필터 */
+      if(show && q){
+        const txt = (item.dataset.searchText||'').toLowerCase();
+        if(!txt.includes(q)) show = false;
+      }
+
+      item.classList.toggle('hidden-mood', !show);
+      if(show) visible++;
+    });
+
+    const nr = document.getElementById('no-results');
+    const hasFilter = activeRegion || activeChip || searchQuery;
+    if(nr){
+      nr.querySelector('p').textContent = searchQuery
+        ? `"${searchQuery}" 검색 결과가 없습니다.`
+        : activeRegion
+          ? `해당 출발지의 스팟이 없습니다.`
+          : '해당 무드의 스팟이 없습니다.';
+      nr.style.display = (visible===0 && hasFilter) ? 'block' : 'none';
+    }
+  }
+
+  function goToSpot(id){
+    window.location.href = 'spot.html?id=' + encodeURIComponent(id) + (IS_PREV?'&preview=draft':'');
+  }
+
+  function goHome(){
+    window.location.href = 'index.html' + (IS_PREV?'?preview=draft':'');
+  }
+
+  document.addEventListener('click', function(e){
+    const wrap = document.getElementById('title-departure-wrap');
+    if(wrap && !wrap.contains(e.target)) closeRegionDropdown();
+  });
+
+  window.addEventListener('storage', e=>{ if(e.key===STOR_KEY) renderPage(); });
+  renderPage();
+  if(!IS_PREV){
+    SB.get().then(remote=>{
+      if(!remote)return;
+      localStorage.setItem('nightDriveConfig',JSON.stringify(remote));
+      renderPage();
+    }).catch(()=>{});
+  }
+  </script>
+
+</body>
+</html>

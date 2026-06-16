@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title id="page-title">심야 드라이브</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scrollbar-gutter:stable;}
+    body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+
+    /* ── Presets (identical to index.html) ── */
+    .spot-preset-1{background:radial-gradient(ellipse at 65% 25%,#2d1b4e 0%,#090912 55%),linear-gradient(175deg,#0a0818 0%,#1a0f30 55%,#060609 100%);}
+    .spot-preset-2{background:radial-gradient(ellipse at 30% 60%,#0a2d40 0%,#030d15 55%),linear-gradient(175deg,#030d12 0%,#0d2535 55%,#030a10 100%);}
+    .spot-preset-3{background:radial-gradient(ellipse at 70% 40%,#1a2d0a 0%,#0a0d03 55%),linear-gradient(175deg,#050810 0%,#151f0a 55%,#050808 100%);}
+    .spot-preset-4{background:radial-gradient(ellipse at 45% 30%,#1a0a30 0%,#090912 55%),linear-gradient(175deg,#060609 0%,#120a28 55%,#050508 100%);}
+    .spot-preset-5{background:radial-gradient(ellipse at 55% 50%,#2d1a0a 0%,#0d0905 55%),linear-gradient(175deg,#0a0503 0%,#1e1005 55%,#090502 100%);}
+
+    /* ── Page wrapper (max-width container) ── */
+    .page{max-width:480px;margin:0 auto;position:relative;}
+
+    /* ── Hero — same veil effects as index.html content-veil / header-veil ── */
+    .hero{
+      position:relative;
+      width:100%;height:65dvh;min-height:320px;
+      overflow:hidden;
+    }
+    .content-veil{
+      position:absolute;left:0;right:0;bottom:0;height:64%;
+      background:linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.48) 38%,rgba(0,0,0,0.14) 70%,transparent 100%);
+      -webkit-backdrop-filter:blur(8px) saturate(120%);backdrop-filter:blur(8px) saturate(120%);
+      -webkit-mask-image:linear-gradient(to top,#000 48%,rgba(0,0,0,0.55) 72%,transparent 100%);
+      mask-image:linear-gradient(to top,#000 48%,rgba(0,0,0,0.55) 72%,transparent 100%);
+      pointer-events:none;
+    }
+    .header-veil-hero{
+      position:absolute;top:0;left:0;right:0;
+      background:linear-gradient(to bottom,rgba(0,0,0,0.55),transparent);
+      -webkit-backdrop-filter:blur(10px) saturate(120%);backdrop-filter:blur(10px) saturate(120%);
+      -webkit-mask-image:linear-gradient(to bottom,#000 50%,transparent 100%);
+      mask-image:linear-gradient(to bottom,#000 50%,transparent 100%);
+      height:30%;pointer-events:none;
+    }
+
+    /* Image swipe carousel */
+    .swipe{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;width:100%;height:100%;-ms-overflow-style:none;scrollbar-width:none;}
+    .swipe::-webkit-scrollbar{display:none;}
+    .swipe-slide{flex-shrink:0;width:100%;height:100%;scroll-snap-align:start;}
+    .swipe-slide img{width:100%;height:100%;object-fit:cover;display:block;}
+
+    /* Dots */
+    .hero-info{position:absolute;bottom:28px;left:32px;right:32px;z-index:2;}
+    .dots{display:flex;gap:5px;margin-bottom:12px;}
+    .dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.28);transition:background .2s;}
+    .dot.on{background:rgba(255,255,255,0.92);}
+
+    /* Hero text — same as index.html buildSpotSection */
+    .hero-tags{font-size:13px;font-weight:700;color:rgba(251,191,36,0.85);letter-spacing:.02em;margin-bottom:9px;}
+    .hero-title{font-size:28px;font-weight:900;line-height:1.2;letter-spacing:-.025em;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,0.55);margin-bottom:9px;}
+    .hero-loc{font-size:15px;font-weight:500;color:rgba(255,255,255,0.80);}
+
+    /* ── Content card — same bg as index.html list section ── */
+    .content-card{
+      background:#111116;
+      border-radius:24px 24px 0 0;
+      margin-top:-9px;position:relative;z-index:10;
+      padding:34px 32px 120px;
+      min-height:45dvh;
+    }
+    .handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:0 auto 24px;}
+
+    /* Mood chips */
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;}
+    .chip{
+      display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:50px;
+      border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.04);
+      font-size:13px;font-weight:600;color:rgba(255,255,255,0.55);
+    }
+
+    /* Description */
+    .desc{font-size:15px;line-height:1.85;color:rgba(255,255,255,0.55);white-space:pre-wrap;}
+
+    /* Divider */
+    .divider{height:1px;background:rgba(255,255,255,0.07);margin:22px 0;}
+
+    /* Image gallery */
+    .gallery-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.22);margin-bottom:12px;}
+    .gallery{display:flex;gap:10px;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;padding-bottom:4px;}
+    .gallery::-webkit-scrollbar{display:none;}
+    .gallery-item{flex-shrink:0;width:148px;height:148px;border-radius:14px;overflow:hidden;cursor:pointer;}
+    .gallery-item img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .22s;}
+    .gallery-item:active img{transform:scale(.96);}
+
+    /* Empty content */
+    .no-content{font-size:14px;color:rgba(255,255,255,0.20);font-style:italic;}
+
+    /* Error page */
+    .err{padding:80px 32px;text-align:center;}
+    .err p{font-size:15px;color:rgba(255,255,255,0.30);line-height:1.7;}
+    .err a{color:rgba(74,222,128,0.70);font-weight:700;text-decoration:none;}
+
+    /* Toast */
+    .toast{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:rgba(74,222,128,0.14);border:1px solid rgba(74,222,128,0.30);
+      color:rgba(134,239,172,0.95);padding:9px 22px;border-radius:10px;
+      font-size:13px;font-weight:700;z-index:999;transition:opacity .35s;pointer-events:none;
+      white-space:nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page">
+    <div id="app"></div>
+  </div>
+
+  <script src="ui.js"></script>
+  <script>
+  const params   = new URLSearchParams(location.search);
+  const SPOT_ID  = params.get('id');
+  const IS_PREV  = params.get('preview') === 'draft';
+  const STOR_KEY = IS_PREV ? 'nightDriveConfig_draft' : 'nightDriveConfig';
+
+  const SB=(()=>{
+    const U='https://hqedpgvyxaohywilkhyq.supabase.co';
+    const K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZWRwZ3Z5eGFvaHl3aWxraHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NjUxMzIsImV4cCI6MjA5NzE0MTEzMn0.xS5cLymVZSSAjw1o_JJJ0Vd-hfofaYFGU9AeT7VR_6M';
+    const H={apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'};
+    return {
+      async get(){const r=await fetch(U+'/rest/v1/config?id=eq.1&select=data',{headers:H});if(!r.ok)throw new Error(r.status);const rows=await r.json();return rows[0]?.data||null;},
+      async set(d){const r=await fetch(U+'/rest/v1/config',{method:'POST',headers:{...H,Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id:1,data:d})});if(!r.ok)throw new Error(r.status);}
+    };
+  })();
+
+  const DEFAULT_DATA = {
+    brandName:"심야 드라이브",
+    hero:{heading:"",scrollHint:"",chips:[
+      {id:"c1",icon:"laptop",label:"나혼자 작업"},
+      {id:"c2",icon:"headphones",label:"멍때리기"},
+      {id:"c3",icon:"book",label:"미술전시"},
+      {id:"c4",icon:"chat",label:"수다"}
+    ]},
+    spots:[
+      {id:"sp1",title:"헤드폰 볼륨을 높여도 눈치 보이지 않는 곳",thumbTitle1:"헤드폰 볼륨을 높여도",thumbTitle2:"눈치 보이지 않는 곳",tags:"#노트북작업 #새벽3시마감 #주차여유",moodChipIds:["c1"],location:"경기 남양주 OOO카페",description:"",bgPreset:"1",bgColor:"#1a2e4a",images:[],thumbnailImageId:null},
+      {id:"sp2",title:"가로등 없는 굽은 길 끝, 차 안에서 즐기는 물멍",thumbTitle1:"가로등 없는 굽은 길 끝,",thumbTitle2:"차 안에서 즐기는 물멍",tags:"#가만히물멍 #24시간개방 #야외주차장",moodChipIds:["c2"],location:"경기 양평 OOO공원",description:"",bgPreset:"2",bgColor:"#0d2535",images:[],thumbnailImageId:null},
+      {id:"sp3",title:"새벽의 죽도해변, 파도 소리만 들리는 곳",thumbTitle1:"파도 소리만 들리는",thumbTitle2:"새벽의 죽도해변",tags:"#밤바다 #파도소리 #24시간",moodChipIds:["c2"],location:"강원 양양 · 죽도해변",description:"",bgPreset:"3",bgColor:"#1a3a5c",images:[],thumbnailImageId:null},
+      {id:"sp4",title:"구름 위 호수에서 혼자만의 물멍",thumbTitle1:"구름 위 호수에서",thumbTitle2:"혼자만의 물멍",tags:"#물멍 #산정상 #야간개방",moodChipIds:["c2"],location:"경기 가평 · 호명호수",description:"",bgPreset:"4",bgColor:"#1e4d4d",images:[],thumbnailImageId:null},
+      {id:"sp5",title:"인천 끝자락에서 만나는 황금빛 을왕리 노을",thumbTitle1:"인천 끝자락에서 만나는",thumbTitle2:"황금빛 을왕리 노을",tags:"#노을맛집 #드라이브 #포차",moodChipIds:["c2"],location:"인천 · 을왕리 해변",description:"",bgPreset:"1",bgColor:"#3d1a5c",images:[],thumbnailImageId:null},
+      {id:"sp6",title:"도시 불빛이 내려다보이는 하늘 위의 억새밭",thumbTitle1:"도시 불빛이 내려다보이는",thumbTitle2:"하늘 위의 억새밭",tags:"#야경 #억새 #산책",moodChipIds:["c2","c3"],location:"서울 · 하늘공원",description:"",bgPreset:"5",bgColor:"#0f2d1a",images:[],thumbnailImageId:null},
+      {id:"sp7",title:"파도 소리와 커피 향이 섞이는 강릉 안목해변의 밤",thumbTitle1:"파도 소리와 커피 향이 섞이는",thumbTitle2:"강릉 안목해변의 밤",tags:"#커피거리 #밤바다 #카페",moodChipIds:["c1","c4"],location:"강원 강릉 · 안목해변",description:"",bgPreset:"2",bgColor:"#1a0f2d",images:[],thumbnailImageId:null},
+      {id:"sp8",title:"새벽 물안개 속에서 혼자만의 고요한 시간",thumbTitle1:"새벽 물안개 속에서",thumbTitle2:"혼자만의 고요한 시간",tags:"#물안개 #고요 #일출",moodChipIds:["c2"],location:"경기 양평 · 두물머리",description:"",bgPreset:"3",bgColor:"#0d1f3c",images:[],thumbnailImageId:null},
+      {id:"sp9",title:"분수쇼가 물드는 다대포의 황혼",thumbTitle1:"분수쇼가 물드는",thumbTitle2:"다대포의 황혼",tags:"#낙조 #분수쇼 #드라이브",moodChipIds:["c2"],location:"부산 · 다대포해변",description:"",bgPreset:"4",bgColor:"#2d1a0f",images:[],thumbnailImageId:null},
+      {id:"sp10",title:"할미바위 너머로 지는 꽃지해변 황금빛 일몰",thumbTitle1:"할미바위 너머로 지는",thumbTitle2:"꽃지해변 황금빛 일몰",tags:"#일몰 #갯벌 #캠핑",moodChipIds:["c2"],location:"충남 태안 · 꽃지해변",description:"",bgPreset:"5",bgColor:"#1a2d0f",images:[],thumbnailImageId:null},
+      {id:"sp11",title:"불 꺼진 예술마을을 혼자 걷는 늦은 밤",thumbTitle1:"불 꺼진 예술마을을",thumbTitle2:"혼자 걷는 늦은 밤",tags:"#심야카페 #예술마을 #산책",moodChipIds:["c1","c3"],location:"경기 파주 · 헤이리",description:"",bgPreset:"1",bgColor:"#2d0f1a",images:[],thumbnailImageId:null}
+    ],
+    mainPage:{contentSpotIds:["sp1","sp2"],listTitle:"이런 곳은 어때요?",listItemIds:["sp3","sp4","sp5","sp6","sp7","sp8","sp9","sp10","sp11"]}
+  };
+
+  const ICONS = {
+    laptop:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`,
+    headphones:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 18v-6a9 9 0 0118 0v6M3 18a3 3 0 013-3h1a2 2 0 012 2v2a2 2 0 01-2 2H6a3 3 0 01-3-3zM21 18a3 3 0 00-3-3h-1a2 2 0 00-2 2v2a2 2 0 002 2h1a3 3 0 003-3z"/></svg>`,
+    book:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>`,
+    chat:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`,
+    car:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0zM5 9l2-5h10l2 5m-14 0h14l1 3H4L5 9z"/></svg>`,
+    music:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>`,
+    coffee:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>`,
+    star:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`,
+    moon:`<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>`,
+  };
+  const ICON_FB = ICONS.star;
+
+  function h(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function loadData(){
+    try{const s=localStorage.getItem(STOR_KEY);if(s){const d=JSON.parse(s);if(d.spots&&d.mainPage)return migrate(d);}}catch(e){}
+    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+  function migrate(d){
+    d.hero=d.hero||{};
+    if(!d.hero.headingMode) d.hero.headingMode='fixed';
+    if(!d.hero.headingTimed) d.hero.headingTimed={defaults:[d.hero.heading||''],slots:[]};
+    (d.hero.chips||[]).forEach(c=>{if(c.visible===undefined)c.visible=true;});
+    d.spots=(d.spots||[]).map(s=>({...s,
+      title:s.title||s.adminTitle||s.location||'',
+      thumbTitle1:s.thumbTitle1||s.headline1||'',
+      thumbTitle2:s.thumbTitle2||s.headline2||'',
+      moodChipIds:s.moodChipIds||[],
+      description:s.description||'',
+      images:s.images||(s.imageUrl?[{id:'leg_'+s.id,dataUrl:s.imageUrl,name:'image'}]:[]),
+      thumbnailImageId:s.thumbnailImageId||(s.imageUrl?'leg_'+s.id:null),
+      published:s.published!==undefined?s.published:true,
+    }));
+    return d;
+  }
+  function getThumb(spot){
+    if(spot.images&&spot.images.length>0){
+      const i=spot.images.find(x=>x.id===spot.thumbnailImageId)||spot.images[0];
+      return i?i.dataUrl:'';
+    }
+    return '';
+  }
+
+  let _spot = null;
+
+  function render(){
+    const data = loadData();
+    document.getElementById('brand-name').textContent = data.brandName || '심야 드라이브';
+
+    if(!SPOT_ID){ showErr('URL에 스팟 ID가 없습니다.'); return; }
+    const spot = data.spots.find(s=>s.id===SPOT_ID);
+    if(!spot){ showErr('스팟을 찾을 수 없습니다.'); return; }
+    _spot = spot;
+
+    document.getElementById('page-title').textContent =
+      (spot.title||spot.location||'스팟') + ' · ' + (data.brandName||'심야 드라이브');
+
+    const images = spot.images || [];
+    const thumbUrl = getThumb(spot);
+    const presetCls = (thumbUrl||images.length) ? '' : `spot-preset-${spot.bgPreset||'1'}`;
+
+    /* ── Hero HTML ── */
+    let heroInner = '';
+    if(images.length > 0){
+      heroInner = `<div class="swipe" id="hero-swipe">
+        ${images.map(img=>`<div class="swipe-slide"><img src="${img.dataUrl}" alt="" loading="lazy"></div>`).join('')}
+      </div>`;
+    }
+
+    const dotsHtml = images.length > 1
+      ? `<div class="dots" id="hero-dots">${images.map((_,i)=>`<div class="dot${i===0?' on':''}"></div>`).join('')}</div>`
+      : '';
+
+    const heroStyle = (!images.length && spot.bgColor && !presetCls)
+      ? ` style="background-color:${h(spot.bgColor)}"`
+      : '';
+
+    const t1 = h(spot.thumbTitle1||'');
+    const t2 = h(spot.thumbTitle2||spot.title||'');
+
+    const heroHtml = `
+      <div class="hero ${presetCls}"${heroStyle}>
+        ${heroInner}
+        <div class="header-veil-hero"></div>
+        <div class="content-veil"></div>
+        <div class="hero-info">
+          ${dotsHtml}
+          ${spot.tags?`<p class="hero-tags">${h(spot.tags)}</p>`:''}
+          <h1 class="hero-title">${t1?`${t1}<br>`:''}${t2}</h1>
+          <p class="hero-loc">${h(spot.location)}</p>
+        </div>
+      </div>`;
+
+    /* ── Mood chips ── */
+    const moodHtml = (spot.moodChipIds||[]).map(id=>{
+      const c=(data.hero.chips||[]).find(x=>x.id===id);
+      return c?`<span class="chip">${ICONS[c.icon]||ICON_FB}${h(c.label)}</span>`:'';
+    }).join('');
+
+    /* ── Gallery ── */
+    const galleryHtml = images.length > 1 ? `
+      <div class="divider"></div>
+      <p class="gallery-lbl">사진 ${images.length}장</p>
+      <div class="gallery">
+        ${images.map(img=>`<div class="gallery-item"><img src="${img.dataUrl}" alt="" loading="lazy"></div>`).join('')}
+      </div>` : '';
+
+    /* ── Card ── */
+    const hasContent = moodHtml || spot.description || galleryHtml;
+    const cardHtml = `
+      <div class="content-card">
+        <div class="handle"></div>
+        ${moodHtml?`<div class="chips">${moodHtml}</div>`:''}
+        ${spot.description?`<p class="desc">${h(spot.description)}</p>`:''}
+        ${galleryHtml}
+        ${!hasContent?`<p class="no-content">아직 상세 내용이 없습니다.</p>`:''}
+      </div>`;
+
+    document.getElementById('app').innerHTML = heroHtml + cardHtml;
+
+    /* ── Swipe dots sync ── */
+    if(images.length > 1){
+      const sw = document.getElementById('hero-swipe');
+      if(sw) sw.addEventListener('scroll',()=>{
+        const idx = Math.round(sw.scrollLeft/sw.clientWidth);
+        document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===idx));
+      },{passive:true});
+    }
+  }
+
+  function showErr(msg){
+    document.getElementById('app').innerHTML = `
+      <div class="err">
+        <p>${msg}<br><br>
+        <a href="index.html${IS_PREV?'?preview=draft':''}">← 홈으로 돌아가기</a></p>
+      </div>`;
+  }
+
+  function goBack(){
+    if(history.length>1) history.back();
+    else window.location.href='index.html'+(IS_PREV?'?preview=draft':'');
+  }
+
+  function toggleLike(){ document.getElementById('like-btn').classList.toggle('liked'); }
+
+  function shareSpot(){
+    const title = _spot ? (_spot.title||_spot.location||'심야 드라이브') : '심야 드라이브';
+    if(navigator.share){ navigator.share({title, url:location.href}); }
+    else if(navigator.clipboard){
+      navigator.clipboard.writeText(location.href);
+      toast('링크가 복사됐습니다.');
+    }
+  }
+
+  function toast(msg){
+    const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+    document.body.appendChild(t);
+    setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),380);},2000);
+  }
+
+  render();
+  if(!IS_PREV){
+    SB.get().then(remote=>{
+      if(!remote)return;
+      localStorage.setItem('nightDriveConfig',JSON.stringify(remote));
+      render();
+    }).catch(()=>{});
+  }
+  </script>
+
+</body>
+</html>
